@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RenaimingToolCS", "RenaimingToolCS\RenaimingToolCS.csproj", "{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CCFA19A9-B46F-4969-879A-342C2D1B3A7E}
+	EndGlobalSection
+EndGlobal
