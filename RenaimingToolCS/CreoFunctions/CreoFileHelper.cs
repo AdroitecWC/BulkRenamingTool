@@ -66,6 +66,62 @@ namespace RenaimingToolCS.ViewModels.Creo
             }
         }
 
+        public static void OpenAllCreoModelsInFolder(string folderPath)
+        {
+            var session = CreoSessionManager.Instance.Session;
+            var baseSession = (IpfcBaseSession)session;
+
+            CCpfcModelDescriptor modelDescriptorCreator = new CCpfcModelDescriptor();
+            IpfcRetrieveModelOptions retrieveOpts = (new CCpfcRetrieveModelOptions()).Create();
+
+            var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                                    .Where(f => f.EndsWith(".prt", StringComparison.OrdinalIgnoreCase) ||
+                                                f.EndsWith(".asm", StringComparison.OrdinalIgnoreCase) ||
+                                                f.EndsWith(".drw", StringComparison.OrdinalIgnoreCase) ||
+                                                Path.GetFileName(f).ToLower().Contains(".prt.") ||
+                                                Path.GetFileName(f).ToLower().Contains(".asm.") ||
+                                                Path.GetFileName(f).ToLower().Contains(".drw."))
+                                    .ToList();
+
+            foreach (var file in allFiles)
+            {
+                try
+                {
+                    string modelName = Path.GetFileNameWithoutExtension(file);
+                    EpfcModelType modelType = GetCreoModelType(file);
+
+                    if ((int)modelType < 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Skipping unknown model type: {file}");
+                        continue;
+                    }
+
+                    IpfcModelDescriptor descriptor = modelDescriptorCreator.Create((int)modelType, modelName, null);
+                    baseSession.RetrieveModelWithOpts(descriptor, retrieveOpts);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to open model: {file}\n{ex}");
+                }
+            }
+        }
+        private static EpfcModelType GetCreoModelType(string filePath)
+        {
+            if (filePath.EndsWith(".prt", StringComparison.OrdinalIgnoreCase) ||
+                Path.GetFileName(filePath).ToLower().Contains(".prt."))
+                return EpfcModelType.EpfcMDL_PART;
+
+            if (filePath.EndsWith(".asm", StringComparison.OrdinalIgnoreCase) ||
+                Path.GetFileName(filePath).ToLower().Contains(".asm."))
+                return EpfcModelType.EpfcMDL_ASSEMBLY;
+
+            if (filePath.EndsWith(".drw", StringComparison.OrdinalIgnoreCase) ||
+                Path.GetFileName(filePath).ToLower().Contains(".drw."))
+                return EpfcModelType.EpfcMDL_DRAWING;
+
+            // Default fallback
+            return (EpfcModelType)(-1); // or EpfcMDL_PART as a default if necessary
+        }
 
 
     }

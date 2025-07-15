@@ -152,10 +152,22 @@ namespace RenaimingToolCS.ViewModels
 
         private string NormalizeCreoName(string fileName)
         {
-            // Remove known Creo extensions with version numbers
-            var pattern = @"\.(prt|asm|drw|frm|sec)\.\d+$";
-            return Regex.Replace(fileName, pattern, "", RegexOptions.IgnoreCase);
+            if (string.IsNullOrWhiteSpace(fileName))
+                return string.Empty;
+
+            fileName = fileName.Trim().ToLowerInvariant();
+
+            // Remove known Creo extensions and optional version numbers
+            var pattern = @"\.(prt|asm|drw|frm|sec)(\.\d+)?$";
+            fileName = Regex.Replace(fileName, pattern, "");
+
+            // Remove trailing .1, .2, etc. if not already removed
+            fileName = Regex.Replace(fileName, @"\.\d+$", "");
+
+            return fileName;
         }
+
+
 
         public void LoadExcelMapping(string excelPath)
         {
@@ -239,19 +251,20 @@ namespace RenaimingToolCS.ViewModels
 
         private string StripCreoExtensions(string fileName)
         {
-            // Handles files like "PART1.prt.1" or "ASSY1.asm.9"
-            string[] knownExtensions = { ".prt", ".asm", ".drw" };
+            if (string.IsNullOrWhiteSpace(fileName))
+                return fileName;
 
-            foreach (var ext in knownExtensions)
+            // Normalize casing
+            fileName = fileName.ToLowerInvariant();
+
+            // Regular expression to match "name.ext.version"
+            var match = Regex.Match(fileName, @"^(.*)\.(prt|asm|drw)\.\d+$", RegexOptions.IgnoreCase);
+            if (match.Success)
             {
-                int extIndex = fileName.IndexOf(ext + ".");
-                if (extIndex >= 0)
-                {
-                    return fileName.Substring(0, extIndex);
-                }
+                return match.Groups[1].Value;
             }
 
-            // If no match found, fallback to removing after last dot (optional)
+            // Fallback: strip after last dot
             int lastDotIndex = fileName.LastIndexOf('.');
             if (lastDotIndex > 0)
             {
@@ -260,6 +273,7 @@ namespace RenaimingToolCS.ViewModels
 
             return fileName;
         }
+
 
 
         private void DownloadExcel()
@@ -278,14 +292,16 @@ namespace RenaimingToolCS.ViewModels
                     {
                         var worksheet = workbook.Worksheets.Add("Files");
 
-                        worksheet.Cell(1, 1).Value = "File Path";
-                        worksheet.Cell(1, 2).Value = "Original Name";
+                        
+                        worksheet.Cell(1, 1).Value = "Original Name";
+                        worksheet.Cell(1, 2).Value = "New Name";
+                        worksheet.Cell(1, 3).Value = "File Path";
 
                         int row = 2;
                         foreach (var file in Files)
                         {
-                            worksheet.Cell(row, 1).Value = file.FullPath;       // Add FullPath property in your model
-                            worksheet.Cell(row, 2).Value = file.OriginalName;
+                            worksheet.Cell(row, 3).Value = file.FullPath;       // Add FullPath property in your model
+                            worksheet.Cell(row, 1).Value = file.OriginalName;
                             row++;
                         }
 
@@ -304,79 +320,74 @@ namespace RenaimingToolCS.ViewModels
 
         private void RenameCreoFiles()
         {
-            OpenAndCloseCreo creo = new OpenAndCloseCreo();
-            var renamedLog = new StringBuilder();
-            var errorLog = new StringBuilder();
-            // Initialize Creo session
-            
+            var renamedModels = new StringBuilder();
+            var errorMessages = new StringBuilder();
+            var creo = new OpenAndCloseCreo();
 
             try
             {
-                var WorkingDir = InputFolderPath;
-                creo.RunProe(WorkingDir);
-                CreoSessionManager.Instance.InitializeCreoSession();
-                IpfcBaseSession session = CreoSessionManager.Instance.Session;
-                session.EraseUndisplayedModels();
-                // 1. Purge and open all drawings in folder
-                CreoFileHelper.PurgeFolder(InputFolderPath);
-                CreoFileHelper.OpenAllDrawingsInFolder(InputFolderPath);
-
-
-
-                var baseSession = (IpfcBaseSession)session;
-                var loadedModels = baseSession.ListModels();
-
-                // 2. Create rename map from Files collection (DataGrid)
+                // Get rename map from DataGrid-bound collection
                 var renameMap = Files
                     .Where(f => !string.IsNullOrWhiteSpace(f.OldName) && !string.IsNullOrWhiteSpace(f.NewName))
-                    .ToDictionary(f => f.OldName, f => f.NewName);
+                    .ToDictionary(f => f.OldName.Trim(), f => f.NewName.Trim(), StringComparer.OrdinalIgnoreCase);
 
-                // 3. Rename logic
-                foreach (IpfcModel model in loadedModels)
+                string folderPath = InputFolderPath;
+                
+                creo.RunProe(folderPath);
+                CreoFileHelper.PurgeFolder(folderPath);
+                CreoSessionManager.Instance.InitializeCreoSession();
+                var session = CreoSessionManager.Instance.Session;
+                var baseSession = (IpfcBaseSession)session;
+
+                var modelDescriptorCreator = new CCpfcModelDescriptor();
+                var retrieveOpts = (new CCpfcRetrieveModelOptions()).Create();
+
+                // Load all .drw files
+                CreoFileHelper.OpenAllCreoModelsInFolder(InputFolderPath);
+
+                var loadedModels = baseSession.ListModels();
+
+                for (int i = 0; i < loadedModels.Count; i++)
                 {
-                    var currentName = model.InstanceName;
+                    var model = loadedModels[i];
+                    string currentName = model.InstanceName;
 
-                    // Only match model base name (remove extensions)
-                    var baseName = StripCreoExtensions(currentName);
-
-                    if (renameMap.TryGetValue(baseName, out var newName))
+                    if (renameMap.TryGetValue(currentName, out var newName))
                     {
-                        if (!string.Equals(baseName, newName, StringComparison.OrdinalIgnoreCase))
+                        if (!string.Equals(currentName, newName, StringComparison.OrdinalIgnoreCase))
                         {
                             try
                             {
                                 model.Rename(newName, true);
-                                renamedLog.AppendLine($"Renamed '{baseName}' to '{newName}'");
+                                renamedModels.AppendLine($"Renamed '{currentName}' to '{newName}'");
                             }
                             catch (Exception ex)
                             {
-                                errorLog.AppendLine($"Failed to rename '{baseName}' to '{newName}': {ex.Message}");
+                                errorMessages.AppendLine($"Failed to rename '{currentName}' to '{newName}': {ex.Message}");
                             }
                         }
                     }
                 }
 
-                // 4. Log results
                 var finalLog = new StringBuilder();
-                if (renamedLog.Length > 0)
-                {
-                    finalLog.AppendLine("Renamed Models:\n" + renamedLog.ToString());
-                }
+                if (renamedModels.Length > 0)
+                    finalLog.AppendLine("Renamed Models:\n" + renamedModels.ToString());
 
-                if (errorLog.Length > 0)
-                {
-                    finalLog.AppendLine("Errors:\n" + errorLog.ToString());
-                }
+                if (errorMessages.Length > 0)
+                    finalLog.AppendLine("Errors:\n" + errorMessages.ToString());
 
                 MessageBox.Show(finalLog.ToString(), "Rename Result", MessageBoxButton.OK, MessageBoxImage.Information);
-                creo.KillCreO();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Unexpected error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
                 creo.KillCreO();
             }
         }
+
         private void MoveRenamedFilesToOutputFolder(string baseName, string sourceFolder, string destinationFolder)
         {
             // Move all related Creo files (.prt.*, .asm.*, .drw.*) with the base name
@@ -426,6 +437,12 @@ namespace RenaimingToolCS.ViewModels
             get => _newName;
             set => SetProperty(ref _newName, value);
         }
-        public string FullPath { get; set; }
+        private string _fullPath;
+        public string FullPath
+        {
+            get => _fullPath;
+            set => SetProperty(ref _fullPath, value);
+        }
+       
     }
 }
