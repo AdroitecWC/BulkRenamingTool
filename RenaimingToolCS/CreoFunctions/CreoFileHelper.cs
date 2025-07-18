@@ -75,12 +75,12 @@ namespace RenaimingToolCS.ViewModels.Creo
             IpfcRetrieveModelOptions retrieveOpts = (new CCpfcRetrieveModelOptions()).Create();
 
             var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
-                                    .Where(f => f.EndsWith(".prt", StringComparison.OrdinalIgnoreCase) ||
+                                    .Where(f => f.EndsWith(".drw", StringComparison.OrdinalIgnoreCase) ||
+                                                f.EndsWith(".prt", StringComparison.OrdinalIgnoreCase) ||
                                                 f.EndsWith(".asm", StringComparison.OrdinalIgnoreCase) ||
-                                                f.EndsWith(".drw", StringComparison.OrdinalIgnoreCase) ||
+                                                Path.GetFileName(f).ToLower().Contains(".drw.") ||
                                                 Path.GetFileName(f).ToLower().Contains(".prt.") ||
-                                                Path.GetFileName(f).ToLower().Contains(".asm.") ||
-                                                Path.GetFileName(f).ToLower().Contains(".drw."))
+                                                Path.GetFileName(f).ToLower().Contains(".asm."))
                                     .ToList();
 
             foreach (var file in allFiles)
@@ -122,6 +122,7 @@ namespace RenaimingToolCS.ViewModels.Creo
             // Default fallback
             return (EpfcModelType)(-1); // or EpfcMDL_PART as a default if necessary
         }
+
 
 
     }

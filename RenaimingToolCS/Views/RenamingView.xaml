@@ -106,7 +106,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="20" x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -138,7 +138,11 @@
         <TextBlock Text="Output Folder:" VerticalAlignment="Center" Grid.Row="1" Grid.Column="0" Margin="0,12,0,0" 
                    Foreground="#F0F0F0" FontWeight="SemiBold" FontSize="14"/>
         <TextBox Text="{Binding OutputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
-                 Grid.Row="1" Grid.Column="0" Margin="110,12,110,0"/>
+         Grid.Row="1" Grid.Column="0" Margin="110,12,110,0"
+         AllowDrop="True"
+         ToolTip="Drag and drop a folder here or click Browse"
+         PreviewDragOver="OutputFolder_PreviewDragOver"
+         Drop="OutputFolder_Drop"/>
         <Button Content="Browse" Command="{Binding BrowseOutputFolderCommand}" 
                 Grid.Row="1" Grid.Column="1" Width="90" Height="32" Margin="0,12,0,0"/>
 
