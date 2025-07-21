@@ -41,6 +41,33 @@ namespace RenaimingToolCS.Views
             }
         }
 
+        private void OutputFolder_PreviewDragOver(object sender, DragEventArgs e)
+        {
+            e.Handled = true;
+            e.Effects = DragDropEffects.Copy;
+        }
+
+        private void OutputFolder_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (dropped.Length > 0)
+                {
+                    string path = dropped[0];
+                    if (Directory.Exists(path))
+                    {
+                        var vm = this.DataContext as RenamingViewModel;
+                        if (vm != null)
+                        {
+                            vm.OutputFolderPath = path;
+                        }
+                    }
+                }
+            }
+        }
+
+
         private void Excel_PreviewDragOver(object sender, DragEventArgs e)
         {
             e.Handled = true;
@@ -142,7 +169,7 @@ namespace RenaimingToolCS.Views
             if (depObj != null)
             {
                 for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
-                {
+                {   
                     DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
                     if (child is T t)
                         yield return t;
@@ -152,5 +179,6 @@ namespace RenaimingToolCS.Views
                 }
             }
         }
+
     }
 }

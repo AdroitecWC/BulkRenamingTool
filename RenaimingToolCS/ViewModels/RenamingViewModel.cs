@@ -7,6 +7,7 @@ using RenaimingToolCS.Helpers;
 using RenaimingToolCS.ViewModels.Creo;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -234,11 +235,25 @@ namespace RenaimingToolCS.ViewModels
 
                 if (duplicateLog.Length > 0)
                 {
-                    MessageBox.Show(
-                        $"Duplicate entries found and skipped:\n\n{duplicateLog}",
+                    string folderPath = Path.GetDirectoryName(excelPath);
+                    string logFilePath = Path.Combine(folderPath, $"DuplicateLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+
+                    File.WriteAllText(logFilePath, duplicateLog.ToString());
+
+                    var result = MessageBox.Show(
+                        "Duplicate entries found and skipped.\nWould you like to open the duplicate log file?",
                         "Duplicate Warning",
-                        MessageBoxButton.OK,
+                        MessageBoxButton.YesNo,
                         MessageBoxImage.Warning);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = logFilePath,
+                            UseShellExecute = true
+                        });
+                    }
                 }
             }
             catch (Exception ex)
@@ -318,39 +333,68 @@ namespace RenaimingToolCS.ViewModels
         }
 
 
+
+
         private void RenameCreoFiles()
-        {
+        {   
             var renamedModels = new StringBuilder();
             var errorMessages = new StringBuilder();
             var creo = new OpenAndCloseCreo();
+            int renamedCount = 0;
+
+            // Create and show the progress form
+            ProgressInfoForm progressForm = new ProgressInfoForm("Starting rename...");
+            progressForm.Show();
 
             try
             {
-                // Get rename map from DataGrid-bound collection
                 var renameMap = Files
                     .Where(f => !string.IsNullOrWhiteSpace(f.OldName) && !string.IsNullOrWhiteSpace(f.NewName))
                     .ToDictionary(f => f.OldName.Trim(), f => f.NewName.Trim(), StringComparer.OrdinalIgnoreCase);
 
                 string folderPath = InputFolderPath;
-                
+
+                if (!string.IsNullOrWhiteSpace(OutputFolderPath))
+                {
+                    folderPath = OutputFolderPath;
+
+                    try
+                    {
+                        // Clean existing output folder
+                        if (Directory.Exists(OutputFolderPath))
+                            Directory.Delete(OutputFolderPath, true);
+
+                        // Copy files and subdirectories
+                        CopyDirectory(InputFolderPath, OutputFolderPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Failed to copy files to output folder:\n{ex.Message}", "Copy Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                }
+
+
                 creo.RunProe(folderPath);
                 CreoFileHelper.PurgeFolder(folderPath);
                 CreoSessionManager.Instance.InitializeCreoSession();
+
                 var session = CreoSessionManager.Instance.Session;
                 var baseSession = (IpfcBaseSession)session;
 
-                var modelDescriptorCreator = new CCpfcModelDescriptor();
-                var retrieveOpts = (new CCpfcRetrieveModelOptions()).Create();
-
-                // Load all .drw files
                 CreoFileHelper.OpenAllCreoModelsInFolder(InputFolderPath);
 
                 var loadedModels = baseSession.ListModels();
+                int total = loadedModels.Count;
 
-                for (int i = 0; i < loadedModels.Count; i++)
+                for (int i = 0; i < total; i++)
                 {
                     var model = loadedModels[i];
                     string currentName = model.InstanceName;
+
+                    int currentIndex = i + 1;
+                    int percent = (int)(currentIndex * 100.0 / total);
+                    //progressForm.UpdateProgress(percent, $"Renaming: {currentName}");
 
                     if (renameMap.TryGetValue(currentName, out var newName))
                     {
@@ -359,6 +403,9 @@ namespace RenaimingToolCS.ViewModels
                             try
                             {
                                 model.Rename(newName, true);
+                                model.Save();
+                                renamedCount++;
+                                progressForm.UpdateProgress(percent,$"Renamed '({currentIndex}/{total}): {currentName}' to '{newName}'");
                                 renamedModels.AppendLine($"Renamed '{currentName}' to '{newName}'");
                             }
                             catch (Exception ex)
@@ -369,51 +416,57 @@ namespace RenaimingToolCS.ViewModels
                     }
                 }
 
+                // Save log
                 var finalLog = new StringBuilder();
                 if (renamedModels.Length > 0)
                     finalLog.AppendLine("Renamed Models:\n" + renamedModels.ToString());
-
                 if (errorMessages.Length > 0)
                     finalLog.AppendLine("Errors:\n" + errorMessages.ToString());
 
-                MessageBox.Show(finalLog.ToString(), "Rename Result", MessageBoxButton.OK, MessageBoxImage.Information);
+                string logFilePath = Path.Combine(folderPath, $"RenameLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+                File.WriteAllText(logFilePath, finalLog.ToString());
+                progressForm.Close();
+                MessageBoxResult result = MessageBox.Show(
+                    $"{renamedCount} file(s) renamed.\nOpen log?",
+                    "Rename Complete", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = logFilePath,
+                        UseShellExecute = true
+                    });
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Unexpected error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
                 creo.KillCreO();
+                progressForm.Close();
             }
         }
 
-        private void MoveRenamedFilesToOutputFolder(string baseName, string sourceFolder, string destinationFolder)
+
+
+        private void CopyDirectory(string sourceDir, string targetDir)
         {
-            // Move all related Creo files (.prt.*, .asm.*, .drw.*) with the base name
-            string[] extensions = { ".prt", ".asm", ".drw" };
-
-            foreach (var ext in extensions)
+            Directory.CreateDirectory(targetDir);
+            foreach (string file in Directory.GetFiles(sourceDir))
             {
-                var files = Directory.GetFiles(sourceFolder, $"{baseName}{ext}.*"); // handles .prt.1, .asm.2 etc.
+                string targetFilePath = Path.Combine(targetDir, Path.GetFileName(file));
+                File.Copy(file, targetFilePath);
+            }
 
-                foreach (var file in files)
-                {
-                    var fileName = Path.GetFileName(file);
-                    var destPath = Path.Combine(destinationFolder, fileName);
-
-                    try
-                    {
-                        File.Copy(file, destPath, overwrite: true);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Failed to move file {fileName}: {ex.Message}", "Move Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    }
-                }
+            foreach (string dir in Directory.GetDirectories(sourceDir))
+            {
+                string targetSubDir = Path.Combine(targetDir, Path.GetFileName(dir));
+                CopyDirectory(dir, targetSubDir);
             }
         }
-
 
 
     }
