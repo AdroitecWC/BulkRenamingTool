@@ -15,13 +15,13 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_790ACDBF420F4319A17EEF727A9538D1"
+        "MsmKey" = "8:_4D8B79E10DCE40DB8AA32D841F17B328"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_F9E03BAA5AAC4E3E9D8D010FFAFA5FB4"
+        "MsmKey" = "8:_67965A99F56C4E4281542642A3BF1106"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -82,6 +82,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
             }
         }
     }
@@ -114,10 +122,10 @@
         }
         "File"
         {
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_790ACDBF420F4319A17EEF727A9538D1"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_67965A99F56C4E4281542642A3BF1106"
             {
-            "SourcePath" = "8:C:\\Users\\IMP USER 001\\Downloads\\image.ico"
-            "TargetName" = "8:image.ico"
+            "SourcePath" = "8:C:\\Users\\IMP USER 001\\Downloads\\logo.ico"
+            "TargetName" = "8:logo.ico"
             "Tag" = "8:"
             "Folder" = "8:_FA13CE7DD2604C7EB75DC585839BB811"
             "Condition" = "8:"
@@ -164,7 +172,7 @@
             }
             "{3C67513D-01DD-4637-8A68-80971EB9504F}:_FA13CE7DD2604C7EB75DC585839BB811"
             {
-            "DefaultLocation" = "8:[ProgramFilesFolder][Manufacturer]\\[ProductName]"
+            "DefaultLocation" = "8:[ProgramFilesFolder]Adroitec Engineering Solutions\\[ProductName]"
             "Name" = "8:#1925"
             "AlwaysCreate" = "11:FALSE"
             "Condition" = "8:"
@@ -191,7 +199,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:CreoRenamingTool"
         "ProductCode" = "8:{150469AD-E99F-422D-8314-32ECF5F0B540}"
-        "PackageCode" = "8:{2714B62E-A5A8-459A-9736-72509E593958}"
+        "PackageCode" = "8:{E4C2B616-3D5C-434F-AA6B-EE89D8C7A7CB}"
         "UpgradeCode" = "8:{96EB002D-C8FF-4608-9EF3-077F18494E71}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
@@ -199,12 +207,12 @@
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
         "ProductVersion" = "8:1.0.0"
-        "Manufacturer" = "8:Default Company Name"
+        "Manufacturer" = "8:Adroitec Engineering Solutions"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
         "Title" = "8:CreoRenamingTool"
         "Subject" = "8:"
-        "ARPCONTACT" = "8:Default Company Name"
+        "ARPCONTACT" = "8:Adroitec Engineering Solutions"
         "Keywords" = "8:"
         "ARPCOMMENTS" = "8:"
         "ARPURLINFOABOUT" = "8:"
@@ -311,7 +319,7 @@
         }
         "Shortcut"
         {
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_87F01421266D49829E45581AC4F0AC68"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_C0B22A2686BA4118ACF3AE27B8687190"
             {
             "Name" = "8:CreoRenamingTool"
             "Arguments" = "8:"
@@ -319,24 +327,10 @@
             "ShowCmd" = "3:1"
             "IconIndex" = "3:0"
             "Transitive" = "11:FALSE"
-            "Target" = "8:_F9E03BAA5AAC4E3E9D8D010FFAFA5FB4"
-            "Folder" = "8:_61E013468C3D48DE9DC78E9A511D773A"
-            "WorkingFolder" = "8:_FA13CE7DD2604C7EB75DC585839BB811"
-            "Icon" = "8:_790ACDBF420F4319A17EEF727A9538D1"
-            "Feature" = "8:"
-            }
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_E76420A12B8847E190396D14A4820215"
-            {
-            "Name" = "8:CreoRenamingTool"
-            "Arguments" = "8:"
-            "Description" = "8:"
-            "ShowCmd" = "3:1"
-            "IconIndex" = "3:0"
-            "Transitive" = "11:FALSE"
-            "Target" = "8:_F9E03BAA5AAC4E3E9D8D010FFAFA5FB4"
+            "Target" = "8:_4D8B79E10DCE40DB8AA32D841F17B328"
             "Folder" = "8:_AAA6508362E4495CA660BA1FC400C42D"
             "WorkingFolder" = "8:_FA13CE7DD2604C7EB75DC585839BB811"
-            "Icon" = "8:_790ACDBF420F4319A17EEF727A9538D1"
+            "Icon" = "8:_67965A99F56C4E4281542642A3BF1106"
             "Feature" = "8:"
             }
         }
@@ -738,7 +732,7 @@
         }
         "ProjectOutput"
         {
-            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_F9E03BAA5AAC4E3E9D8D010FFAFA5FB4"
+            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_4D8B79E10DCE40DB8AA32D841F17B328"
             {
             "SourcePath" = "8:..\\RenaimingToolCS\\obj\\Debug\\net8.0-windows\\apphost.exe"
             "TargetName" = "8:"

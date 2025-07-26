@@ -39,7 +39,7 @@ namespace RenaimingToolCS.ViewModels
         public RenamingViewModel()
         {
             DownloadExcelCommand = new RelayCommand(DownloadExcel);
-            RenameFilesCommand= new RelayCommand(RenameCreoFiles);
+            RenameFilesCommand = new RelayCommand(RenameCreoFiles);
             BrowseInputFolderCommand = new RelayCommand(BrowseInputFolder);
             BrowseOutputFolderCommand = new RelayCommand(BrowseOutputFolder);
             BrowseExcelFileCommand = new RelayCommand(BrowseExcelFile);
@@ -101,7 +101,20 @@ namespace RenaimingToolCS.ViewModels
         public string InputFolderPath
         {
             get => _inputFolderPath;
-            set => SetProperty(ref _inputFolderPath, value);
+            set
+            {
+                if (_inputFolderPath != value)
+                {
+                    _inputFolderPath = value;
+                    OnPropertyChanged(nameof(InputFolderPath));
+
+                    // Trigger logic when set manually
+                    if (Directory.Exists(_inputFolderPath))
+                    {
+                        LoadFilesFromInputFolder(_inputFolderPath);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -110,13 +123,35 @@ namespace RenaimingToolCS.ViewModels
         public string OutputFolderPath
         {
             get => _outputFolderPath;
-            set => SetProperty(ref _outputFolderPath, value);
+            set
+            {
+                if (_outputFolderPath != value)
+                {
+                    _outputFolderPath = value;
+                    OnPropertyChanged(nameof(OutputFolderPath));
+                }
+            }
         }
-        public string ExcelFilePath  // <--- add this property
+        public string ExcelFilePath
         {
             get => _excelFilePath;
-            set => SetProperty(ref _excelFilePath, value);
+            set
+            {
+                if (_excelFilePath != value)
+                {
+                    _excelFilePath = value;
+                    OnPropertyChanged(nameof(ExcelFilePath));
+
+                    if (File.Exists(_excelFilePath) &&
+                        (Path.GetExtension(_excelFilePath).ToLower() == ".xls" ||
+                         Path.GetExtension(_excelFilePath).ToLower() == ".xlsx"))
+                    {
+                        LoadExcelMapping(_excelFilePath);
+                    }
+                }
+            }
         }
+
 
         /// <summary>
         /// List of files displayed in the DataGrid with their original and new names.
@@ -307,7 +342,7 @@ namespace RenaimingToolCS.ViewModels
                     {
                         var worksheet = workbook.Worksheets.Add("Files");
 
-                        
+
                         worksheet.Cell(1, 1).Value = "Original Name";
                         worksheet.Cell(1, 2).Value = "New Name";
                         worksheet.Cell(1, 3).Value = "File Path";
@@ -336,7 +371,7 @@ namespace RenaimingToolCS.ViewModels
 
 
         private void RenameCreoFiles()
-        {   
+        {
             var renamedModels = new StringBuilder();
             var errorMessages = new StringBuilder();
             var creo = new OpenAndCloseCreo();
@@ -405,7 +440,7 @@ namespace RenaimingToolCS.ViewModels
                                 model.Rename(newName, true);
                                 model.Save();
                                 renamedCount++;
-                                progressForm.UpdateProgress(percent,$"Renamed '({currentIndex}/{total}): {currentName}' to '{newName}'");
+                                progressForm.UpdateProgress(percent, $"Renamed '({currentIndex}/{total}): {currentName}' to '{newName}'");
                                 renamedModels.AppendLine($"Renamed '{currentName}' to '{newName}'");
                             }
                             catch (Exception ex)
@@ -496,6 +531,6 @@ namespace RenaimingToolCS.ViewModels
             get => _fullPath;
             set => SetProperty(ref _fullPath, value);
         }
-       
+
     }
 }
