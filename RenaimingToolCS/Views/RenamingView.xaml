@@ -5,12 +5,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:RenaimingToolCS.Views"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="800" d:DesignWidth="1000"
              Background="#222222">
 
     <UserControl.Resources>
-
-        <!-- TextBox Style -->
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="#2E2E2E"/>
             <Setter Property="Foreground" Value="#F0F0F0"/>
@@ -22,6 +20,7 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -39,13 +38,12 @@
             </Setter>
         </Style>
 
-        <!-- Button Style -->
         <Style TargetType="Button">
-            <Setter Property="Background" Value="#5A8DEE"/>
+            <Setter Property="Background" Value="#2F4C7A"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Padding" Value="10,8"/>
             <Setter Property="Margin" Value="5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -64,20 +62,66 @@
             </Setter>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#3C64D8" BlurRadius="6" ShadowDepth="0"/>
+                    <DropShadowEffect Color="#446597" BlurRadius="6" ShadowDepth="0"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3C64D8"/>
+                    <Setter Property="Background" Value="#446597"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#2B4FA3"/>
+                    <Setter Property="Background" Value="#223859"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <!-- DataGrid Style -->
+        <Style x:Key="SwitchToggleButton" TargetType="{x:Type ToggleButton}">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Width" Value="60" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <Viewbox>
+                            <Grid Width="60" Height="32">
+                                <Border x:Name="Track"
+                                        CornerRadius="16"
+                                        Background="#A0A0A0"
+                                        BorderBrush="#888888"
+                                        BorderThickness="1">
+                                    <Grid>
+                                        <TextBlock Text="🌙" FontSize="12" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="8,0,0,0"/>
+                                        <TextBlock Text="☀️" FontSize="12" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
+                                    </Grid>
+                                </Border>
+                                <Border x:Name="Thumb"
+                                        CornerRadius="13"
+                                        Background="White"
+                                        Width="26" Height="26"
+                                        HorizontalAlignment="Left"
+                                        Margin="3,0,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect ShadowDepth="1" Color="Black" Opacity="0.2" BlurRadius="2"/>
+                                    </Border.Effect>
+                                </Border>
+                            </Grid>
+                        </Viewbox>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="#2F4C7A" />
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Track" Property="Opacity" Value="0.5"/>
+                                <Setter TargetName="Thumb" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="DataGrid" x:Key="StyledDataGrid">
             <Setter Property="Background" Value="#2E2E2E"/>
             <Setter Property="Foreground" Value="#F0F0F0"/>
@@ -85,7 +129,7 @@
             <Setter Property="AlternatingRowBackground" Value="#424242"/>
             <Setter Property="GridLinesVisibility" Value="None"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#5A8DEE"/>
+            <Setter Property="BorderBrush" Value="#2F4C7A"/>
             <Setter Property="ColumnHeaderHeight" Value="38"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="FontSize" Value="14"/>
@@ -93,9 +137,8 @@
             <Setter Property="CanUserAddRows" Value="False"/>
         </Style>
 
-        <!-- Column Header Style -->
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#5A8DEE"/>
+            <Setter Property="Background" Value="#2F4C7A"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -109,114 +152,114 @@
     <Grid Margin="20" x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
 
-        <!-- Input Folder -->
-        <TextBlock Text="Input Folder:" VerticalAlignment="Center" Grid.Row="0" Grid.Column="0" 
-                   Foreground="#F0F0F0" FontWeight="SemiBold" FontSize="14"/>
-        <TextBox Text="{Binding InputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
-                 Grid.Row="0" Grid.Column="0"
-                 Margin="110,0,110,0"
-                 AllowDrop="True"
-                 ToolTip="Drag and drop a folder here or click Browse"
-                 PreviewDragOver="InputFolder_PreviewDragOver"
-                 Drop="InputFolder_Drop"/>
-        <Button Content="Browse" Command="{Binding BrowseInputFolderCommand}" 
-                Grid.Row="0" Grid.Column="1" Width="90" Height="32"/>
+        <DockPanel Grid.Row="0" Margin="0,0,0,20" LastChildFill="False">
+            <TextBlock Text="Bulk Renaming Tool"
+                       DockPanel.Dock="Left"
+                       VerticalAlignment="Center"
+                       Foreground="White"
+                       FontSize="30"
+                       FontWeight="Bold"/>
+            <Image x:Name="LogoImage"
+                       Source="pack://application:,,,/Resources/logo (2).png"
+                       Height="50"
+                       Margin="0,0,10,0"
+                       DockPanel.Dock="Right"
+                       Stretch="Uniform"
+                       VerticalAlignment="Center"/>
+        </DockPanel>
 
-        <!-- Output Folder -->
-        <TextBlock Text="Output Folder:" VerticalAlignment="Center" Grid.Row="1" Grid.Column="0" Margin="0,12,0,0" 
-                   Foreground="#F0F0F0" FontWeight="SemiBold" FontSize="14"/>
-        <TextBox Text="{Binding OutputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
-         Grid.Row="1" Grid.Column="0" Margin="110,12,110,0"
-         AllowDrop="True"
-         ToolTip="Drag and drop a folder here or click Browse"
-         PreviewDragOver="OutputFolder_PreviewDragOver"
-         Drop="OutputFolder_Drop"/>
-        <Button Content="Browse" Command="{Binding BrowseOutputFolderCommand}" 
-                Grid.Row="1" Grid.Column="1" Width="90" Height="32" Margin="0,12,0,0"/>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Excel File -->
-        <TextBlock Text="Excel File:" VerticalAlignment="Center" Grid.Row="2" Grid.Column="0" Margin="0,12,0,0" 
-                   Foreground="#F0F0F0" FontWeight="SemiBold" FontSize="14"/>
-        <TextBox Text="{Binding ExcelFilePath, UpdateSourceTrigger=PropertyChanged}"
-                 Grid.Row="2" Grid.Column="0"
-                 Margin="110,12,110,0"
-                 AllowDrop="True"
-                 ToolTip="Drag and drop an Excel file here or click Browse"
-                 PreviewDragOver="Excel_PreviewDragOver"
-                 Drop="Excel_Drop"/>
-        <Button Content="Browse" Command="{Binding BrowseExcelFileCommand}" Grid.Row="2" Grid.Column="1" Width="90" Height="32" Margin="0,12,0,0"/>
+            <Button Content="Browse Input Folder"
+                Grid.Row="0" Grid.Column="0"
+                Command="{Binding BrowseInputFolderCommand}"
+                VerticalAlignment="Center"
+                Margin="0,0,10,12"
+                Padding="12,8"
+                Height="{Binding ElementName=InputPathTextBox, Path=ActualHeight}"/>
 
-        <!-- DataGrid Heading -->
-        <TextBlock Text="Files to Rename" Grid.Row="3" Grid.ColumnSpan="3" 
-                   Foreground="#CCCCCC" FontWeight="Bold" FontSize="18" Margin="5,20,0,10"/>
+            <TextBox x:Name="InputPathTextBox" Text="{Binding InputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
+                     Grid.Row="0" Grid.Column="1" 
+                     AllowDrop="True"
+                     ToolTip="Drag and drop a folder here or click the button"
+                     PreviewDragOver="InputFolder_PreviewDragOver"
+                     Drop="InputFolder_Drop"/>
 
-        <!-- DataGrid -->
-        <DataGrid ItemsSource="{Binding Files}" AutoGenerateColumns="False" 
-                  Grid.Row="4" Grid.ColumnSpan="3" 
-                  Style="{StaticResource StyledDataGrid}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Original Name" Binding="{Binding OriginalName}" IsReadOnly="True" Width="*"/>
-                <DataGridTextColumn Header="Old Name" Binding="{Binding OldName}" IsReadOnly="True" Width="*"/>
-                <DataGridTextColumn Header="New Name" Binding="{Binding NewName}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+            <Button Content="Browse Output Folder" Grid.Row="1" Grid.Column="0" Command="{Binding BrowseOutputFolderCommand}" VerticalAlignment="Center" Margin="0,0,10,12"
+                    Height="{Binding ElementName=OutputPathTextBox, Path=ActualHeight}"/>
+            <TextBox x:Name="OutputPathTextBox" Text="{Binding OutputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
+                     Grid.Row="1" Grid.Column="1"
+                     AllowDrop="True"
+                     ToolTip="Drag and drop a folder here or click the button"
+                     PreviewDragOver="OutputFolder_PreviewDragOver"
+                     Drop="OutputFolder_Drop"/>
+            <Button Content="📥" Grid.Row="1" Grid.Column="2"
+                    ToolTip="Download Excel"
+                    Command="{Binding DownloadExcelCommand}"
+                    Width="50" Margin="5,0,0,12"
+                    FontSize="16"
+                    Padding="0"
+                    Height="{Binding ElementName=OutputPathTextBox, Path=ActualHeight}"/>
 
-        <!-- Rename Button -->
-        <StackPanel Grid.Row="6" Grid.ColumnSpan="2"
-            Orientation="Horizontal"
-            HorizontalAlignment="Right"
-            Margin="0,20,0,0"
-            >
+            <Button Content="Browse Excel File" Grid.Row="2" Grid.Column="0" Command="{Binding BrowseExcelFileCommand}" VerticalAlignment="Center" Margin="0,0,10,12"
+                    Height="{Binding ElementName=ExcelPathTextBox, Path=ActualHeight}"/>
+            <TextBox x:Name="ExcelPathTextBox" Text="{Binding ExcelFilePath, UpdateSourceTrigger=PropertyChanged}"
+                     Grid.Row="2" Grid.Column="1" 
+                     AllowDrop="True"
+                     ToolTip="Drag and drop an Excel file here or click the button"
+                     PreviewDragOver="Excel_PreviewDragOver"
+                     Drop="Excel_Drop"/>
 
-            <!-- Download Excel Button (on the left) -->
-            <Button Content="Download Excel"
-            Command="{Binding DownloadExcelCommand}"
-            Height="40" Width="140"/>
+            <TextBlock Text="Files to Rename" Grid.Row="3" Grid.ColumnSpan="3" 
+                       Foreground="#CCCCCC" FontWeight="Bold" FontSize="18" Margin="0,20,0,10"/>
 
-            <!-- Rename Files Button (on the right) -->
-            <Button Content="Rename Files"
-            Command="{Binding RenameFilesCommand}"
-            Height="40" Width="140"/>
-        </StackPanel>
-        <!-- Theme Toggle Button - bottom left -->
-        <ToggleButton x:Name="ThemeToggleButton"
-              Grid.Row="5" Grid.Column="0"
-              Width="40" Height="40"
-              Margin="0,20,0,0"
-              FontSize="20"
-              HorizontalAlignment="Left"
-              ToolTip="Toggle Light/Dark Mode"
-              Background="#5A8DEE"
-              Foreground="White"
-              BorderThickness="1.5"
-              BorderBrush="White"
-              Checked="ThemeToggleButton_Checked"
-              Unchecked="ThemeToggleButton_Unchecked">
-            <ToggleButton.Template>
-                <ControlTemplate TargetType="ToggleButton">
-                    <Border CornerRadius="8"
-                    Background="{TemplateBinding Background}"
-                    BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                </ControlTemplate>
-            </ToggleButton.Template>
+            <DataGrid ItemsSource="{Binding Files}" AutoGenerateColumns="False" 
+                      Grid.Row="4" Grid.ColumnSpan="3" 
+                      Style="{StaticResource StyledDataGrid}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Original Name" Binding="{Binding OriginalName}" IsReadOnly="True" Width="*"/>
+                    <DataGridTextColumn Header="Old Name" Binding="{Binding OldName}" IsReadOnly="True" Width="*"/>
+                    <DataGridTextColumn Header="New Name" Binding="{Binding NewName}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
 
-            <TextBlock x:Name="ToggleSymbol" Text="🌙" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </ToggleButton>
+            <StackPanel Grid.Row="5" Grid.ColumnSpan="3"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="0,20,0,0">
+                <Button Content="Rename Files"
+                        Command="{Binding RenameFilesCommand}"
+                        Height="40" Width="140"/>
+            </StackPanel>
 
+            <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom"
+                        Margin="0,20,0,0">
+             
+                <ToggleButton x:Name="ThemeToggleButton"
+                              Style="{StaticResource SwitchToggleButton}"
+                              ToolTip="Toggle Light/Dark Mode"
+                              Checked="ThemeToggleButton_Checked"
+                              Unchecked="ThemeToggleButton_Unchecked"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

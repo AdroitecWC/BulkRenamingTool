@@ -9,6 +9,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Resources\logo.png" />
+	  <None Remove="Resources\logo_light.png" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <COMReference Include="pfcls">
 	    <WrapperTool>tlbimp</WrapperTool>
 	    <VersionMinor>0</VersionMinor>
@@ -33,6 +38,15 @@
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="Resources\logo.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Resources\logo_light.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
 	</ItemGroup>
 
 </Project>
