@@ -91,7 +91,7 @@ namespace RenaimingToolCS.ViewModels
             if (dialog.ShowDialog() == true)
             {
                 ExcelFilePath = dialog.FileName;
-                LoadExcelMapping(ExcelFilePath);
+                //LoadExcelMapping(ExcelFilePath);
             }
         }
 

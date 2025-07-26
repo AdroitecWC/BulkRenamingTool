@@ -163,7 +163,7 @@
                        FontSize="30"
                        FontWeight="Bold"/>
             <Image x:Name="LogoImage"
-                       Source="pack://application:,,,/Resources/logo (2).png"
+                       Source="pack://application:,,,/Resources/logo_light.png"
                        Height="50"
                        Margin="0,0,10,0"
                        DockPanel.Dock="Right"
@@ -187,21 +187,23 @@
             </Grid.ColumnDefinitions>
 
             <Button Content="Browse Input Folder"
-                Grid.Row="0" Grid.Column="0"
-                Command="{Binding BrowseInputFolderCommand}"
-                VerticalAlignment="Center"
-                Margin="0,0,10,12"
-                Padding="12,8"
-                Height="{Binding ElementName=InputPathTextBox, Path=ActualHeight}"/>
+                    Grid.Row="0" Grid.Column="0"
+                    Command="{Binding BrowseInputFolderCommand}"
+                    VerticalAlignment="Center"
+                    Margin="0,0,10,12"
+                    Padding="15,8"
+                    MinWidth="180"
+                    Height="{Binding ElementName=InputPathTextBox, Path=ActualHeight}"/>
 
             <TextBox x:Name="InputPathTextBox" Text="{Binding InputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
-                     Grid.Row="0" Grid.Column="1" 
+                     Grid.Row="0" Grid.Column="1"
                      AllowDrop="True"
                      ToolTip="Drag and drop a folder here or click the button"
                      PreviewDragOver="InputFolder_PreviewDragOver"
                      Drop="InputFolder_Drop"/>
 
             <Button Content="Browse Output Folder" Grid.Row="1" Grid.Column="0" Command="{Binding BrowseOutputFolderCommand}" VerticalAlignment="Center" Margin="0,0,10,12"
+                    Padding="15,8" MinWidth="180"
                     Height="{Binding ElementName=OutputPathTextBox, Path=ActualHeight}"/>
             <TextBox x:Name="OutputPathTextBox" Text="{Binding OutputFolderPath, UpdateSourceTrigger=PropertyChanged}" 
                      Grid.Row="1" Grid.Column="1"
@@ -209,15 +211,20 @@
                      ToolTip="Drag and drop a folder here or click the button"
                      PreviewDragOver="OutputFolder_PreviewDragOver"
                      Drop="OutputFolder_Drop"/>
-            <Button Content="📥" Grid.Row="1" Grid.Column="2"
-                    ToolTip="Download Excel"
-                    Command="{Binding DownloadExcelCommand}"
-                    Width="50" Margin="5,0,0,12"
-                    FontSize="16"
-                    Padding="0"
-                    Height="{Binding ElementName=OutputPathTextBox, Path=ActualHeight}"/>
 
+            <Button Grid.Row="1" Grid.Column="2"
+        ToolTip="Generate Excel Template"
+        Command="{Binding DownloadExcelCommand}"
+        Margin="5,0,0,12"
+        Height="{Binding ElementName=OutputPathTextBox, Path=ActualHeight}"
+        Width="160">
+                <!-- Set fixed width to match original visual -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="📥" FontSize="16" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
             <Button Content="Browse Excel File" Grid.Row="2" Grid.Column="0" Command="{Binding BrowseExcelFileCommand}" VerticalAlignment="Center" Margin="0,0,10,12"
+                    Padding="15,8" MinWidth="180"
                     Height="{Binding ElementName=ExcelPathTextBox, Path=ActualHeight}"/>
             <TextBox x:Name="ExcelPathTextBox" Text="{Binding ExcelFilePath, UpdateSourceTrigger=PropertyChanged}"
                      Grid.Row="2" Grid.Column="1" 
@@ -253,7 +260,7 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Bottom"
                         Margin="0,20,0,0">
-             
+
                 <ToggleButton x:Name="ThemeToggleButton"
                               Style="{StaticResource SwitchToggleButton}"
                               ToolTip="Toggle Light/Dark Mode"

@@ -11,6 +11,7 @@
 	<ItemGroup>
 	  <None Remove="Resources\logo.png" />
 	  <None Remove="Resources\logo_light.png" />
+	  <None Remove="Resources\logo_white.png" />
 	</ItemGroup>
 
 	<ItemGroup>
