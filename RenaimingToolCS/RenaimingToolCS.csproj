@@ -9,6 +9,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Resources\logo.ico" />
 	  <None Remove="Resources\logo.png" />
 	  <None Remove="Resources\logo_light.png" />
 	  <None Remove="Resources\logo_white.png" />
@@ -24,12 +25,6 @@
 	    <Isolated>false</Isolated>
 	    <EmbedInteropTypes>true</EmbedInteropTypes>
 	  </COMReference>
-	  <COMReference Include="{215d64d2-031c-33c7-96e3-61794cd1ee61}">
-	    <WrapperTool>tlbimp</WrapperTool>
-	    <VersionMinor>0</VersionMinor>
-	    <VersionMajor>2</VersionMajor>
-	    <Guid>215d64d2-031c-33c7-96e3-61794cd1ee61</Guid>
-	  </COMReference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -42,6 +37,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Resource Include="Resources\logo.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
 	  <Resource Include="Resources\logo.png">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Resource>
