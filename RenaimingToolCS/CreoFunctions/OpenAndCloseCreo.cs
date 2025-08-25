@@ -70,6 +70,8 @@ namespace RenaimingToolCS.CreoFunctions
 
         public bool RunProe(string strWorkingDirectory)
         {
+            string proePath = Environment.GetEnvironmentVariable("PROE_PATH");
+
             bool result = true;
             try
             {
@@ -83,8 +85,8 @@ namespace RenaimingToolCS.CreoFunctions
                         }
                     }
 
-                    string proePath = Environment.GetEnvironmentVariable("PROE_PATH");
-                     proePath = "D:\\PTC\\Creo 11.0.5.0\\Parametric\\bin\\parametric.exe";
+                   proePath = Environment.GetEnvironmentVariable("PROE_PATH");
+                     //proePath = "D:\\PTC\\Creo 11.0.5.0\\Parametric\\bin\\parametric.exe";
                     string myDocsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                     string startPath = System.IO.Path.Combine(myDocsPath, "\\");
                     System.Diagnostics.Process.Start(proePath, startPath);
