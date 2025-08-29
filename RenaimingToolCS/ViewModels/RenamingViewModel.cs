@@ -1,9 +1,11 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Ookii.Dialogs.Wpf;
 using pfcls;
 using RenaimingToolCS.CreoFunctions;
 using RenaimingToolCS.Helpers;
 using RenaimingToolCS.ViewModels.Creo;
+using RenaimingToolCS.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -62,6 +64,7 @@ namespace RenaimingToolCS.ViewModels
         public ICommand BrowseOutputFolderCommand { get; }
         public ICommand BrowseExcelFileCommand { get; }
         public ICommand SelectAllCommand { get; }
+        public ICommand OpenSettingsWindowCommand { get; }
 
         public RenamingViewModel()
         {
@@ -70,7 +73,17 @@ namespace RenaimingToolCS.ViewModels
             BrowseInputFolderCommand = new RelayCommand(BrowseInputFolder);
             BrowseOutputFolderCommand = new RelayCommand(BrowseOutputFolder);
             BrowseExcelFileCommand = new RelayCommand(BrowseExcelFile);
+            OpenSettingsWindowCommand = new RelayCommand(OpenSettingsWindow);
         }
+
+
+        private void OpenSettingsWindow()
+        {
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.DataContext = new SettingsWindowViewModel();
+            settingsWindow.ShowDialog();
+        }
+
 
         private void BrowseInputFolder()
         {

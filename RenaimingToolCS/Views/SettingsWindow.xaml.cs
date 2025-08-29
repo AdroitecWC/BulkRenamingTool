@@ -1,16 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using RenaimingToolCS.ViewModels;  
 
 namespace RenaimingToolCS.Views
 {
@@ -19,10 +9,27 @@ namespace RenaimingToolCS.Views
     /// </summary>
     public partial class SettingsWindow : Window
     {
-       
-    public SettingsWindow()
+        public SettingsWindow()
         {
             InitializeComponent();
+            this.Loaded += SettingsWindow_Loaded;
+        }
+
+        private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is SettingsWindowViewModel vm)
+            {
+                // Prevent multiple subscriptions
+                vm.RequestClose -= OnRequestClose;
+                vm.RequestClose += OnRequestClose;
+            }
+        }
+
+        private void OnRequestClose()
+        {
+            this.Close();
         }
     }
+
+
 }

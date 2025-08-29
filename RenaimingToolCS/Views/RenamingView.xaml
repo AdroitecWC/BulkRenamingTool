@@ -172,7 +172,7 @@
             
             <Button x:Name="HelpButton" Style="{StaticResource IconButtonStyle}" Content="❓" ToolTip="Help" DockPanel.Dock="Right" Click="HelpButton_Click" VerticalAlignment="Center" Margin="0,0,5,0"/>
 
-            <Button x:Name="SettingsButton" Style="{StaticResource IconButtonStyle}" Content="⚙️" ToolTip="Settings" DockPanel.Dock="Right" Click="SettingsButton_Click" VerticalAlignment="Center"/>
+            <Button x:Name="SettingsButton" Style="{StaticResource IconButtonStyle}" Content="⚙️" ToolTip="Settings" DockPanel.Dock="Right"  Command="{Binding OpenSettingsWindowCommand}" VerticalAlignment="Center"/>
 
 
             <ToggleButton x:Name="ThemeToggleButton" Style="{StaticResource SwitchToggleButton}" DockPanel.Dock="Right" ToolTip="Toggle Light/Dark Mode" Checked="ThemeToggleButton_Checked" Unchecked="ThemeToggleButton_Unchecked" VerticalAlignment="Center"/>
