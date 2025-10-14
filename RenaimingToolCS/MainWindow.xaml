@@ -6,8 +6,9 @@
         xmlns:local="clr-namespace:RenaimingToolCS"
         xmlns:views="clr-namespace:RenaimingToolCS.Views"
         mc:Ignorable="d"
+        Icon="pack://application:,,,/Resources/logo.ico"
         WindowState="Maximized"
-        Title="BulkRenamingTool" Height="450" Width="800">
+        Title="Bulk Renaming Tool" Height="450" Width="800">
     <Grid>
         <views:RenamingView />
     </Grid>

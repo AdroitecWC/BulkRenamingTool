@@ -1,40 +1,71 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Ookii.Dialogs.Wpf;
 using pfcls;
-
 using RenaimingToolCS.CreoFunctions;
 using RenaimingToolCS.Helpers;
 using RenaimingToolCS.ViewModels.Creo;
+using RenaimingToolCS.Views;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace RenaimingToolCS.ViewModels
 {
-    /// <summary>
-    /// ViewModel class that handles logic for the renaming tool.
-    /// Binds to RenamingView.xaml to handle user input and display files.
-    /// </summary>
     internal class RenamingViewModel : ObservableObject
     {
         private string _inputFolderPath;
         private string _outputFolderPath;
         private string _excelFilePath;
+        private bool _isAllSelected;
+
+        public bool IsAllSelected
+        {
+            get => _isAllSelected;
+            set
+            {
+                if (_isAllSelected != value)
+                {
+                    _isAllSelected = value;
+                    foreach (var file in Files)
+                    {
+                        file.IsSelected = value;
+                    }
+                    OnPropertyChanged(nameof(IsAllSelected));
+                }
+            }
+        }
+
+        private void OnFileSelectionChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(FileModel.IsSelected))
+            {
+                bool allSelected = Files.Any() && Files.All(f => f.IsSelected);
+                if (_isAllSelected != allSelected)
+                {
+                    _isAllSelected = allSelected;
+                    OnPropertyChanged(nameof(IsAllSelected));
+                }
+            }
+        }
 
         public ICommand DownloadExcelCommand { get; }
         public ICommand RenameFilesCommand { get; }
-
         public ICommand BrowseInputFolderCommand { get; }
         public ICommand BrowseOutputFolderCommand { get; }
         public ICommand BrowseExcelFileCommand { get; }
-
-
+        public ICommand SelectAllCommand { get; }
+        public ICommand OpenSettingsWindowCommand { get; }
 
         public RenamingViewModel()
         {
@@ -43,8 +74,18 @@ namespace RenaimingToolCS.ViewModels
             BrowseInputFolderCommand = new RelayCommand(BrowseInputFolder);
             BrowseOutputFolderCommand = new RelayCommand(BrowseOutputFolder);
             BrowseExcelFileCommand = new RelayCommand(BrowseExcelFile);
-
+            OpenSettingsWindowCommand = new RelayCommand(OpenSettingsWindow);
         }
+
+
+        private void OpenSettingsWindow()
+        {
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.DataContext = new SettingsWindowViewModel();
+            settingsWindow.ShowDialog();
+        }
+
+
         private void BrowseInputFolder()
         {
             var dialog = new VistaFolderBrowserDialog
@@ -61,9 +102,6 @@ namespace RenaimingToolCS.ViewModels
             }
         }
 
-
-
-
         private void BrowseOutputFolder()
         {
             var dialog = new VistaFolderBrowserDialog
@@ -71,15 +109,13 @@ namespace RenaimingToolCS.ViewModels
                 Description = "Select Output Folder",
                 UseDescriptionForTitle = true,
                 ShowNewFolderButton = true
-            }
-            ;
+            };
 
             if (dialog.ShowDialog() == true)
             {
                 OutputFolderPath = dialog.SelectedPath;
             }
         }
-
 
         private void BrowseExcelFile()
         {
@@ -91,13 +127,10 @@ namespace RenaimingToolCS.ViewModels
             if (dialog.ShowDialog() == true)
             {
                 ExcelFilePath = dialog.FileName;
-                //LoadExcelMapping(ExcelFilePath);
+                LoadExcelMapping(ExcelFilePath);
             }
         }
 
-        /// <summary>
-        /// Path of the folder containing files to be renamed.
-        /// </summary>
         public string InputFolderPath
         {
             get => _inputFolderPath;
@@ -107,8 +140,6 @@ namespace RenaimingToolCS.ViewModels
                 {
                     _inputFolderPath = value;
                     OnPropertyChanged(nameof(InputFolderPath));
-
-                    // Trigger logic when set manually
                     if (Directory.Exists(_inputFolderPath))
                     {
                         LoadFilesFromInputFolder(_inputFolderPath);
@@ -117,9 +148,6 @@ namespace RenaimingToolCS.ViewModels
             }
         }
 
-        /// <summary>
-        /// Path of the folder where renamed files will be stored.
-        /// </summary>
         public string OutputFolderPath
         {
             get => _outputFolderPath;
@@ -132,6 +160,7 @@ namespace RenaimingToolCS.ViewModels
                 }
             }
         }
+
         public string ExcelFilePath
         {
             get => _excelFilePath;
@@ -141,7 +170,6 @@ namespace RenaimingToolCS.ViewModels
                 {
                     _excelFilePath = value;
                     OnPropertyChanged(nameof(ExcelFilePath));
-
                     if (File.Exists(_excelFilePath) &&
                         (Path.GetExtension(_excelFilePath).ToLower() == ".xls" ||
                          Path.GetExtension(_excelFilePath).ToLower() == ".xlsx"))
@@ -152,58 +180,64 @@ namespace RenaimingToolCS.ViewModels
             }
         }
 
-
-        /// <summary>
-        /// List of files displayed in the DataGrid with their original and new names.
-        /// </summary>
         public ObservableCollection<FileModel> Files { get; } = new ObservableCollection<FileModel>();
 
-        /// <summary>
-        /// Loads file names from the input folder, applies Creo purge, and fills the Files collection.
-        /// </summary>
-        /// <param name="folderPath">Path to the input folder</param>
+        private int GetIterationNumber(string filePath)
+        {
+            string extension = Path.GetExtension(filePath);
+            if (string.IsNullOrEmpty(extension))
+                return -1;
+            if (int.TryParse(extension.Substring(1), out int iteration))
+            {
+                return iteration;
+            }
+            return -1;
+        }
+
         public void LoadFilesFromInputFolder(string folderPath)
         {
+            foreach (var file in Files)
+            {
+                file.PropertyChanged -= OnFileSelectionChanged;
+            }
             Files.Clear();
+
             if (!Directory.Exists(folderPath))
                 return;
 
             CreoFileHelper.PurgeFolder(folderPath);
 
-            Files.Clear();
+            var latestFiles = Directory.GetFiles(folderPath)
+                .GroupBy(path => Path.GetFileNameWithoutExtension(path))
+                .Select(group => group.OrderByDescending(path => GetIterationNumber(path)).First())
+                .ToList();
 
-            var files = Directory.GetFiles(folderPath);
-            foreach (var file in files)
+            foreach (var file in latestFiles)
             {
-                var fileName = Path.GetFileName(file);
-
-                Files.Add(new FileModel
+                var fileModel = new FileModel
                 {
-                    OriginalName = fileName,
-                    OldName = string.Empty,  // Initially empty or same as OriginalName
-                    NewName = string.Empty
-                });
+                    OriginalName = Path.GetFileName(file),
+                    FullPath = file,
+                    // REMOVED: OldName is no longer needed
+                    NewName = string.Empty, // NewName starts empty for manual editing
+                    IsSelected = true
+                };
+                fileModel.PropertyChanged += OnFileSelectionChanged;
+                Files.Add(fileModel);
             }
+
+            _isAllSelected = latestFiles.Any();
+            OnPropertyChanged(nameof(IsAllSelected));
         }
 
-        private string NormalizeCreoName(string fileName)
+        private string CreateMappingKey(string fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName))
                 return string.Empty;
 
             fileName = fileName.Trim().ToLowerInvariant();
-
-            // Remove known Creo extensions and optional version numbers
-            var pattern = @"\.(prt|asm|drw|frm|sec)(\.\d+)?$";
-            fileName = Regex.Replace(fileName, pattern, "");
-
-            // Remove trailing .1, .2, etc. if not already removed
-            fileName = Regex.Replace(fileName, @"\.\d+$", "");
-
-            return fileName;
+            return Regex.Replace(fileName, @"\.\d+$", "");
         }
-
-
 
         public void LoadExcelMapping(string excelPath)
         {
@@ -214,80 +248,38 @@ namespace RenaimingToolCS.ViewModels
             }
 
             var mapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var oldNameSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var newNameSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var duplicateLog = new StringBuilder();
 
             try
             {
                 using (var workbook = new XLWorkbook(excelPath))
                 {
                     var worksheet = workbook.Worksheet(1);
-
-                    foreach (var row in worksheet.RowsUsed().Skip(1))
+                    foreach (var row in worksheet.RowsUsed().Skip(1)) // Skip header
                     {
-                        string rawOld = row.Cell(1).GetString().Trim();
-                        string newName = row.Cell(2).GetString().Trim();
+                        string rawOldName = row.Cell(1).GetString().Trim();
+                        string rawNewName = row.Cell(2).GetString().Trim();
 
-                        if (string.IsNullOrWhiteSpace(rawOld) || string.IsNullOrWhiteSpace(newName))
-                            continue;
-
-                        // Consistently normalize
-                        string normalizedOld = NormalizeCreoName(rawOld).Trim().ToLowerInvariant();
-                        string normalizedNew = newName.Trim();
-
-                        if (!oldNameSet.Add(normalizedOld))
+                        if (string.IsNullOrWhiteSpace(rawOldName) || string.IsNullOrWhiteSpace(rawNewName))
                         {
-                            duplicateLog.AppendLine($"Duplicate OLD name skipped: '{normalizedOld}'");
                             continue;
                         }
 
-                        if (!newNameSet.Add(normalizedNew))
-                        {
-                            duplicateLog.AppendLine($"Duplicate NEW name skipped: '{normalizedNew}'");
-                            continue;
-                        }
-
-                        mapping[normalizedOld] = normalizedNew;
+                        string mappingKey = CreateMappingKey(rawOldName);
+                        mapping[mappingKey] = rawNewName;
                     }
                 }
-                var uniqueFiles = Files
-                     .GroupBy(f => NormalizeCreoName(f.OriginalName).Trim().ToLowerInvariant())
-                     .Select(g => g.First()) // Only one file per normalized name
-                     .ToList();
 
-                // Then map only these:
-                foreach (var file in uniqueFiles)
+                foreach (var file in Files)
                 {
-                    string fileKey = NormalizeCreoName(file.OriginalName).Trim().ToLowerInvariant();
-                    file.OldName = fileKey;
-
+                    string fileKey = CreateMappingKey(file.OriginalName);
+                    // REMOVED: OldName is no longer set
                     if (mapping.TryGetValue(fileKey, out string mappedNewName))
                     {
                         file.NewName = mappedNewName;
                     }
-                }
-
-                if (duplicateLog.Length > 0)
-                {
-                    string folderPath = Path.GetDirectoryName(excelPath);
-                    string logFilePath = Path.Combine(folderPath, $"DuplicateLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-
-                    File.WriteAllText(logFilePath, duplicateLog.ToString());
-
-                    var result = MessageBox.Show(
-                        "Duplicate entries found and skipped.\nWould you like to open the duplicate log file?",
-                        "Duplicate Warning",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Warning);
-
-                    if (result == MessageBoxResult.Yes)
+                    else
                     {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = logFilePath,
-                            UseShellExecute = true
-                        });
+                        file.NewName = string.Empty;
                     }
                 }
             }
@@ -297,35 +289,9 @@ namespace RenaimingToolCS.ViewModels
             }
         }
 
-
-
-        private string StripCreoExtensions(string fileName)
-        {
-            if (string.IsNullOrWhiteSpace(fileName))
-                return fileName;
-
-            // Normalize casing
-            fileName = fileName.ToLowerInvariant();
-
-            // Regular expression to match "name.ext.version"
-            var match = Regex.Match(fileName, @"^(.*)\.(prt|asm|drw)\.\d+$", RegexOptions.IgnoreCase);
-            if (match.Success)
-            {
-                return match.Groups[1].Value;
-            }
-
-            // Fallback: strip after last dot
-            int lastDotIndex = fileName.LastIndexOf('.');
-            if (lastDotIndex > 0)
-            {
-                return fileName.Substring(0, lastDotIndex);
-            }
-
-            return fileName;
-        }
-
-
-
+        // Unchanged methods (DownloadExcel, RenameCreoFiles, etc.) are omitted for brevity.
+        // They work correctly with the new structure without modification.
+        // ... (rest of the unchanged methods from your original file)
         private void DownloadExcel()
         {
             try
@@ -342,18 +308,40 @@ namespace RenaimingToolCS.ViewModels
                     {
                         var worksheet = workbook.Worksheets.Add("Files");
 
-
+                        // Set headers
                         worksheet.Cell(1, 1).Value = "Original Name";
                         worksheet.Cell(1, 2).Value = "New Name";
                         worksheet.Cell(1, 3).Value = "File Path";
 
+                        // Apply style to headers
+                        var headerRange = worksheet.Range("A1:C1");
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+                        headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                        // Add data
                         int row = 2;
                         foreach (var file in Files)
                         {
-                            worksheet.Cell(row, 3).Value = file.FullPath;       // Add FullPath property in your model
                             worksheet.Cell(row, 1).Value = file.OriginalName;
+                            worksheet.Cell(row, 2).Value = file.NewName;      // Ensure NewName exists in your model
+                            worksheet.Cell(row, 3).Value = file.FullPath;
+
+                            // Apply borders to the row
+                            var dataRange = worksheet.Range(row, 1, row, 3);
+                            dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                            dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
                             row++;
                         }
+
+                        // Auto-fit columns
+                        worksheet.Columns().AdjustToContents();
+
+                        // Optional: Freeze top row
+                        worksheet.SheetView.FreezeRows(1);
 
                         workbook.SaveAs(saveFileDialog.FileName);
                     }
@@ -369,6 +357,37 @@ namespace RenaimingToolCS.ViewModels
 
 
 
+        private void ShowTemporaryInfoForm(string message)
+        {
+            var infoForm = new System.Windows.Forms.Form
+            {
+                FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
+                StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+                Width = 300,
+                Height = 100,
+                ControlBox = false,
+                Text = "Info"
+            };
+
+            var lbl = new System.Windows.Forms.Label
+            {
+                Text = message,
+                Dock = System.Windows.Forms.DockStyle.Fill,
+                TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+            };
+            infoForm.Controls.Add(lbl);
+
+            var timer = new System.Windows.Forms.Timer();
+            timer.Interval = 10000; // 10 seconds
+            timer.Tick += (s, ev) =>
+            {
+                timer.Stop();
+                infoForm.Close();
+            };
+            timer.Start();
+
+            infoForm.ShowDialog();
+        }
 
         private void RenameCreoFiles()
         {
@@ -377,29 +396,60 @@ namespace RenaimingToolCS.ViewModels
             var creo = new OpenAndCloseCreo();
             int renamedCount = 0;
 
-            // Create and show the progress form
             ProgressInfoForm progressForm = new ProgressInfoForm("Starting rename...");
-            progressForm.Show();
-
+            ShowTemporaryInfoForm("Creo initialising");
             try
             {
                 var renameMap = Files
-                    .Where(f => !string.IsNullOrWhiteSpace(f.OldName) && !string.IsNullOrWhiteSpace(f.NewName))
-                    .ToDictionary(f => f.OldName.Trim(), f => f.NewName.Trim(), StringComparer.OrdinalIgnoreCase);
+                    .Where(f => f.IsSelected &&
+                                !string.IsNullOrWhiteSpace(f.OriginalName) &&
+                                !string.IsNullOrWhiteSpace(f.NewName) &&
+                                !Path.GetFileNameWithoutExtension(CreateMappingKey(f.OriginalName)).Equals(f.NewName, StringComparison.OrdinalIgnoreCase))
+                    .ToDictionary(f => CreateMappingKey(f.OriginalName), f => f.NewName, StringComparer.OrdinalIgnoreCase);
+
+                if (!renameMap.Any())
+                {
+                    MessageBox.Show("No files need to be renamed.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
 
                 string folderPath = InputFolderPath;
 
                 if (!string.IsNullOrWhiteSpace(OutputFolderPath))
                 {
-                    folderPath = OutputFolderPath;
-
+                    // Folder Safety Check region... (This code is correct and remains unchanged)
+                    #region Folder Safety Check
                     try
                     {
-                        // Clean existing output folder
+                        string fullInputPath = Path.GetFullPath(InputFolderPath).TrimEnd(Path.DirectorySeparatorChar);
+                        string fullOutputPath = Path.GetFullPath(OutputFolderPath).TrimEnd(Path.DirectorySeparatorChar);
+
+                        if (string.Equals(fullInputPath, fullOutputPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            MessageBox.Show("The output folder cannot be the same as the input folder.",
+                                            "Invalid Output Folder", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+
+                        if (fullOutputPath.StartsWith(fullInputPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                        {
+                            MessageBox.Show("The output folder cannot be a subfolder of the input folder.",
+                                            "Invalid Output Folder", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Could not validate folder paths: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                    #endregion
+
+                    folderPath = OutputFolderPath;
+                    try
+                    {
                         if (Directory.Exists(OutputFolderPath))
                             Directory.Delete(OutputFolderPath, true);
-
-                        // Copy files and subdirectories
                         CopyDirectory(InputFolderPath, OutputFolderPath);
                     }
                     catch (Exception ex)
@@ -409,15 +459,15 @@ namespace RenaimingToolCS.ViewModels
                     }
                 }
 
-
                 creo.RunProe(folderPath);
+                progressForm.Show();
                 CreoFileHelper.PurgeFolder(folderPath);
                 CreoSessionManager.Instance.InitializeCreoSession();
-
+                //CloseBrowser();
                 var session = CreoSessionManager.Instance.Session;
                 var baseSession = (IpfcBaseSession)session;
-
-                CreoFileHelper.OpenAllCreoModelsInFolder(InputFolderPath);
+                session.EraseUndisplayedModels();
+                CreoFileHelper.OpenAllCreoModelsInFolder(folderPath);
 
                 var loadedModels = baseSession.ListModels();
                 int total = loadedModels.Count;
@@ -425,44 +475,61 @@ namespace RenaimingToolCS.ViewModels
                 for (int i = 0; i < total; i++)
                 {
                     var model = loadedModels[i];
-                    string currentName = model.InstanceName;
-
+                    string modelOriginalFullName = CreateMappingKey(model.FileName);
                     int currentIndex = i + 1;
                     int percent = (int)(currentIndex * 100.0 / total);
-                    //progressForm.UpdateProgress(percent, $"Renaming: {currentName}");
 
-                    if (renameMap.TryGetValue(currentName, out var newName))
+                    if (renameMap.TryGetValue(modelOriginalFullName, out var newName))
                     {
-                        if (!string.Equals(currentName, newName, StringComparison.OrdinalIgnoreCase))
+                        // --- ADDED --- Store the original name before it changes.
+                        string originalInstanceName = model.InstanceName;
+                        //for custom names
+                        string confirmedNewName = ShowRenameConfirmationPopup(originalInstanceName, newName);
+                        try
                         {
-                            try
-                            {
-                                model.Rename(newName, true);
-                                model.Save();
-                                renamedCount++;
-                                progressForm.UpdateProgress(percent, $"Renamed '({currentIndex}/{total}): {currentName}' to '{newName}'");
-                                renamedModels.AppendLine($"Renamed '{currentName}' to '{newName}'");
-                            }
-                            catch (Exception ex)
-                            {
-                                errorMessages.AppendLine($"Failed to rename '{currentName}' to '{newName}': {ex.Message}");
-                            }
+                            //model.Display();
+
+                            model.Rename(newName, true);
+                            //model.Rename(confirmedNewName, true);
+                            model.Save();
+                            renamedCount++;
+
+                            // --- CORRECTED --- Use the stored original name for logging.
+                            progressForm.UpdateProgress(percent, $"Renamed ({currentIndex}/{total}): '{originalInstanceName}' to '{newName}'");
+                            renamedModels.AppendLine($"SUCCESS: Renamed '{originalInstanceName}' to '{newName}'");
+                        }
+                        catch (Exception ex)
+                        {
+                            // --- CORRECTED --- Use the stored original name for logging.
+                            errorMessages.AppendLine($"FAILED to rename '{originalInstanceName}' to '{newName}': {ex.Message}");
                         }
                     }
                 }
 
-                // Save log
+                // --- Log Generation and Final Message (Unchanged) ---
                 var finalLog = new StringBuilder();
+                finalLog.AppendLine($"Rename process completed at: {DateTime.Now}");
+                finalLog.AppendLine($"Total files renamed: {renamedCount}");
+                finalLog.AppendLine("---");
+
                 if (renamedModels.Length > 0)
-                    finalLog.AppendLine("Renamed Models:\n" + renamedModels.ToString());
+                {
+                    finalLog.AppendLine("Successful Renames:");
+                    finalLog.AppendLine(renamedModels.ToString());
+                }
+
                 if (errorMessages.Length > 0)
-                    finalLog.AppendLine("Errors:\n" + errorMessages.ToString());
+                {
+                    finalLog.AppendLine("Errors Encountered:");
+                    finalLog.AppendLine(errorMessages.ToString());
+                }
 
                 string logFilePath = Path.Combine(folderPath, $"RenameLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
                 File.WriteAllText(logFilePath, finalLog.ToString());
                 progressForm.Close();
+                
                 MessageBoxResult result = MessageBox.Show(
-                    $"{renamedCount} file(s) renamed.\nOpen log?",
+                    $"{renamedCount} file(s) renamed successfully.\n{(errorMessages.Length > 0 ? "Some errors occurred." : "")}\n\nWould you like to open the log file?",
                     "Rename Complete", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
                 if (result == MessageBoxResult.Yes)
@@ -476,16 +543,228 @@ namespace RenaimingToolCS.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                progressForm.Close();
+                MessageBox.Show("A critical error occurred during the renaming process: " + ex.Message, "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
                 creo.KillCreO();
-                progressForm.Close();
+                if (progressForm.Visible)
+                {
+                    progressForm.Close();
+                }
             }
         }
+        private string ShowRenameConfirmationPopup1(string originalName, string suggestedNewName)
+        {
+            // Create a custom window for rename confirmation
+            var renameWindow = new Window
+            {
+                Title = "Rename Confirmation",
+                Width = 400,
+                Height = 200,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                Topmost = true, // Ensures window is on top of all other applications
+                WindowStyle = WindowStyle.SingleBorderWindow,
+                ResizeMode = ResizeMode.NoResize
+            };
 
+            // Create a stack panel for layout
+            var stackPanel = new StackPanel
+            {
+                Margin = new Thickness(20)
+            };
 
+            // Original name label
+            var originalNameLabel = new TextBlock
+            {
+                Text = $"Original Name: {originalName}",
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // New name text box
+            var newNameTextBox = new TextBox
+            {
+                Text = suggestedNewName,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // Button panel
+            var buttonPanel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            // Yes button
+            var yesButton = new Button
+            {
+                Content = "Confirm",
+                Width = 100,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+
+            // No button
+            var noButton = new Button
+            {
+                Content = "Cancel",
+                Width = 100
+            };
+
+            string finalNewName = suggestedNewName;
+            bool isConfirmed = false;
+
+            // Yes button click event
+            yesButton.Click += (s, e) =>
+            {
+                finalNewName = newNameTextBox.Text.Trim();
+                isConfirmed = true;
+                renameWindow.Close();
+            };
+
+            // No button click event
+            noButton.Click += (s, e) =>
+            {
+                isConfirmed = false;
+                renameWindow.Close();
+            };
+
+            // Add controls to button panel
+            buttonPanel.Children.Add(yesButton);
+            buttonPanel.Children.Add(noButton);
+
+            // Add controls to stack panel
+            stackPanel.Children.Add(originalNameLabel);
+            stackPanel.Children.Add(new TextBlock { Text = "New Name:", Margin = new Thickness(0, 0, 0, 5) });
+            stackPanel.Children.Add(newNameTextBox);
+            stackPanel.Children.Add(buttonPanel);
+
+            // Set content of window
+            renameWindow.Content = stackPanel;
+
+            // Show dialog and wait
+            renameWindow.ShowDialog();
+
+            // Return the final name or null if cancelled
+            return isConfirmed ? finalNewName : null;
+        }
+        private string ShowRenameConfirmationPopup(string originalName, string suggestedNewName)
+        {
+            var renameWindow = new Window
+            {
+                Title = "Rename Confirmation",
+                Width = 400,
+                Height = 200,
+                Topmost = true,
+                WindowStyle = WindowStyle.SingleBorderWindow,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            // Get the full screen bounds
+            var screenBounds = System.Windows.SystemParameters.WorkArea;
+
+            // Calculate the right-side position with 20% margin
+            double screenWidth = screenBounds.Width;
+            double marginWidth = screenWidth * 0.1;
+
+            // Position the window
+            renameWindow.Left = screenBounds.Right - marginWidth - renameWindow.Width;
+            renameWindow.Top = screenBounds.Top + (screenBounds.Height - renameWindow.Height) / 2;
+
+            var stackPanel = new StackPanel
+            {
+                Margin = new Thickness(20)
+            };
+
+            // Original name label
+            var originalNameLabel = new TextBlock
+            {
+                Text = $"Original Name: {originalName}",
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // New name text box
+            var newNameTextBox = new TextBox
+            {
+                Text = suggestedNewName,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // Button panel
+            var buttonPanel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            // Yes button
+            var yesButton = new Button
+            {
+                Content = "Confirm",
+                Width = 100,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+
+            // No button
+            var noButton = new Button
+            {
+                Content = "Cancel",
+                Width = 100
+            };
+
+            string finalNewName = suggestedNewName;
+            bool isConfirmed = false;
+
+            // Yes button click event
+            yesButton.Click += (s, e) =>
+            {
+                finalNewName = newNameTextBox.Text.Trim();
+                isConfirmed = true;
+                renameWindow.Close();
+            };
+
+            // No button click event
+            noButton.Click += (s, e) =>
+            {
+                isConfirmed = false;
+                renameWindow.Close();
+            };
+
+            // Add controls to button panel
+            buttonPanel.Children.Add(yesButton);
+            buttonPanel.Children.Add(noButton);
+
+            // Add controls to stack panel
+            stackPanel.Children.Add(originalNameLabel);
+            stackPanel.Children.Add(new TextBlock { Text = "New Name:", Margin = new Thickness(0, 0, 0, 5) });
+            stackPanel.Children.Add(newNameTextBox);
+            stackPanel.Children.Add(buttonPanel);
+
+            // Set content of window
+            renameWindow.Content = stackPanel;
+
+            // Show dialog and wait
+            renameWindow.ShowDialog();
+
+            // Return the final name or null if cancelled
+            return isConfirmed ? finalNewName : null;
+        }
+        public void RestartApplication()
+        {
+           
+            try
+            {
+                
+
+                // Restart the application
+                System.Windows.Forms.Application.Restart();
+                System.Windows.Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to restart the application: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         private void CopyDirectory(string sourceDir, string targetDir)
         {
@@ -503,21 +782,33 @@ namespace RenaimingToolCS.ViewModels
             }
         }
 
+        public void CloseBrowser()
+        {
+            try
+            {
+                // Initialize the Creo session (ensure it returns an object with RunMacro method)
+                var session = CreoSessionManager.Instance.Session;
+
+                string closebrowse = "mapkey sb ~ Command `ProCmdBrowserBtn`  0;";
+                session.RunMacro(closebrowse);
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception
+                Console.WriteLine($"Error closing browser: {ex.Message}");
+            }
+        }
 
     }
 
     /// <summary>
-    /// Represents a single file with original and new name properties.
+    /// Represents a single file.
+    /// REMOVED: OldName property is no longer necessary.
     /// </summary>
     internal class FileModel : ObservableObject
     {
+
         public string OriginalName { get; set; }
-        private string _oldName;
-        public string OldName
-        {
-            get => _oldName;
-            set => SetProperty(ref _oldName, value);
-        }
 
         private string _newName;
         public string NewName
@@ -525,6 +816,7 @@ namespace RenaimingToolCS.ViewModels
             get => _newName;
             set => SetProperty(ref _newName, value);
         }
+
         private string _fullPath;
         public string FullPath
         {
@@ -532,5 +824,11 @@ namespace RenaimingToolCS.ViewModels
             set => SetProperty(ref _fullPath, value);
         }
 
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
     }
 }

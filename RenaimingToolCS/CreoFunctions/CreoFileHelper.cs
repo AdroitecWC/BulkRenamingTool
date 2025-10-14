@@ -123,7 +123,74 @@ namespace RenaimingToolCS.ViewModels.Creo
             return (EpfcModelType)(-1); // or EpfcMDL_PART as a default if necessary
         }
 
+        public static void RunPurge(string[] args)
+        {
+            // Step 1: Detect machine type
+            string arch = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE") ?? "";
+            string archW6432 = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "";
+            string processor = Environment.GetEnvironmentVariable("PROCESSOR") ?? "";
 
+            string mc = "unset";
+
+            if (processor == "INTEL_64") mc = "ia64_nt";
+            else if (processor == "INTEL_486") mc = "i486_nt";
+            else if (arch == "IA64") mc = "ia64_nt";
+            else if (arch == "AMD64") mc = "x86e_win64";
+            else if (arch == "x86") mc = "i486_nt";
+            else if (archW6432 == "AMD64") mc = "x86e_win64";
+
+            if (mc == "unset")
+            {
+                Console.WriteLine("ERROR: Cannot detect machine type.");
+                return;
+            }
+
+            // Step 2: Set paths
+            string scriptPath = AppDomain.CurrentDomain.BaseDirectory;
+            string appDir = Path.GetFullPath(Path.Combine(scriptPath, ".."));
+            string cf = Path.GetFullPath(Path.Combine(scriptPath, "..", ".."));
+            string proDir = Path.Combine(cf, "Common Files");
+
+            string creoDirEnv = Environment.GetEnvironmentVariable("PRO_DIRECTORY");
+            if (!string.IsNullOrEmpty(creoDirEnv))
+            {
+                proDir = Path.Combine(creoDirEnv, "Common Files");
+                appDir = creoDirEnv;
+            }
+
+            string purgeExePath = Path.Combine(proDir, mc, "obj", "purge.exe");
+
+            if (!File.Exists(purgeExePath))
+            {
+                Console.WriteLine($"ERROR: purge.exe not found at path: {purgeExePath}");
+                return;
+            }
+
+            // Step 3: Build command-line arguments
+            string arguments = string.Join(" ", args);
+
+            // Step 4: Launch purge.exe
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = purgeExePath,
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            try
+            {
+                using (Process proc = Process.Start(psi))
+                {
+                    proc.WaitForExit();
+                    Console.WriteLine($"purge.exe exited with code {proc.ExitCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to run purge.exe: {ex.Message}");
+            }
+        }
 
     }
 }

@@ -1,0 +1,308 @@
+﻿<Window x:Class="RenaimingToolCS.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RenaimingToolCS.Views"
+        mc:Ignorable="d"
+        Title="SettingsWindow" Height="650" Width="800">
+
+    <Window.Resources>
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderBrush" Value="Gray"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Configure Creo Paths"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   Foreground="#2c3e50"
+                   Margin="0,0,0,20"/>
+
+        <TextBlock Grid.Row="1"
+                   Text="Full path to parametric.exe:"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Foreground="#333"/>
+
+        <Grid Grid.Row="2" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentCreoPath, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding CreoPathHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Current Creo executable path. Select from history or paste/browse a new path.
+                </ComboBox.ToolTip>
+            </ComboBox>
+
+            <Button Content="Browse..."
+                    Width="100"
+                    Grid.Column="1"
+                    Command="{Binding BrowseCreoPathCommand}"
+                    Padding="4"
+                    Background="#3498db"
+                    Foreground="White"
+                    BorderBrush="#2980b9"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Browse and select parametric.exe from your system.
+                </Button.ToolTip>
+            </Button>
+        </Grid>
+
+        <TextBlock Grid.Row="4"
+                   Text="Path to Parametric folder (PRO_DIRECTORY):"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Foreground="#333"/>
+
+        <Grid Grid.Row="5" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentProDirectory, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding ProDirectoryHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select the Parametric folder from history or browse for it.
+                </ComboBox.ToolTip>
+            </ComboBox>
+
+            <Button Content="Browse..."
+                    Width="100"
+                    Grid.Column="1"
+                    Command="{Binding BrowseProDirectoryCommand}"
+                    Padding="4"
+                    Background="#3498db"
+                    Foreground="White"
+                    BorderBrush="#2980b9"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Browse and select the Parametric folder.
+                </Button.ToolTip>
+            </Button>
+        </Grid>
+
+        <TextBlock Grid.Row="6"
+                   Text="Path to pro_comm_msg.exe (PRO_COMM_MSG_EXE):"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Foreground="#333"/>
+
+        <Grid Grid.Row="7" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentProCommMsgExe, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding ProCommMsgExeHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select pro_comm_msg.exe file from history or browse for it.
+                </ComboBox.ToolTip>
+            </ComboBox>
+
+            <Button Content="Browse..."
+                    Width="100"
+                    Grid.Column="1"
+                    Command="{Binding BrowseProCommMsgExeCommand}"
+                    Padding="4"
+                    Background="#3498db"
+                    Foreground="White"
+                    BorderBrush="#2980b9"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Browse and select pro_comm_msg.exe.
+                </Button.ToolTip>
+            </Button>
+        </Grid>
+
+        <TextBlock Grid.Row="8"
+                   Text="Path to vb_api_register.bat:"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Foreground="#333"/>
+
+        <Grid Grid.Row="9" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentVbApiRegisterBatPath, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding VbApiRegisterBatPathHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select vb_api_register.bat file from history or browse for it.
+                </ComboBox.ToolTip>
+            </ComboBox>
+
+            <Button Content="Browse..."
+                    Width="100"
+                    Grid.Column="1"
+                    Command="{Binding BrowseVbApiRegisterBatCommand}"
+                    Padding="4"
+                    Background="#3498db"
+                    Foreground="White"
+                    BorderBrush="#2980b9"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Browse and select vb_api_register.bat.
+                </Button.ToolTip>
+            </Button>
+        </Grid>
+
+        <TextBlock Grid.Row="10"
+                   Text="Common Files folder (optional):"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Foreground="#333"/>
+
+        <Grid Grid.Row="11" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentCommonFilesFolder, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding CommonFilesFolderHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select the Common Files folder from history or browse for it (optional).
+                </ComboBox.ToolTip>
+            </ComboBox>
+
+            <Button Content="Browse..."
+                    Width="100"
+                    Grid.Column="1"
+                    Command="{Binding BrowseCommonFilesFolderCommand}"
+                    Padding="4"
+                    Background="#3498db"
+                    Foreground="White"
+                    BorderBrush="#2980b9"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Browse and select the Common Files folder.
+                </Button.ToolTip>
+            </Button>
+        </Grid>
+
+        <StackPanel Grid.Row="12"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+
+            <Button Content="Save"
+                    Width="80"
+                    Margin="0,0,10,0"
+                    Command="{Binding SaveCommand}"
+                    Background="#27ae60"
+                    Foreground="White"
+                    BorderBrush="#1e8449"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Save settings without closing this window.
+                </Button.ToolTip>
+            </Button>
+
+            <Button Content="Cancel"
+                    Width="80"
+                    Margin="0,0,10,0"
+                    Command="{Binding CancelCommand}"
+                    Background="#95a5a6"
+                    Foreground="White"
+                    BorderBrush="#7f8c8d"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Revert changes and close this window.
+                </Button.ToolTip>
+            </Button>
+
+            <Button Content="Restart"
+                    Width="80"
+                    Command="{Binding ConfirmCommand}"
+                    Background="#2980b9"
+                    Foreground="White"
+                    BorderBrush="#2471a3"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.ToolTip>
+                    Save settings and close this window.
+                </Button.ToolTip>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

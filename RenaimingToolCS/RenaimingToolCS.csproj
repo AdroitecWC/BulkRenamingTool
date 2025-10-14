@@ -9,9 +9,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Resources\File_icon.png" />
+	  <None Remove="Resources\Import_icon.png" />
+	  <None Remove="Resources\info_icon.png" />
+	  <None Remove="Resources\logo.ico" />
 	  <None Remove="Resources\logo.png" />
 	  <None Remove="Resources\logo_light.png" />
 	  <None Remove="Resources\logo_white.png" />
+	  <None Remove="Resources\settings_icon.png" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -24,12 +29,6 @@
 	    <Isolated>false</Isolated>
 	    <EmbedInteropTypes>true</EmbedInteropTypes>
 	  </COMReference>
-	  <COMReference Include="{215d64d2-031c-33c7-96e3-61794cd1ee61}">
-	    <WrapperTool>tlbimp</WrapperTool>
-	    <VersionMinor>0</VersionMinor>
-	    <VersionMajor>2</VersionMajor>
-	    <Guid>215d64d2-031c-33c7-96e3-61794cd1ee61</Guid>
-	  </COMReference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -39,13 +38,29 @@
 	<ItemGroup>
 		<PackageReference Include="ClosedXML" Version="0.105.0" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+		<PackageReference Include="System.Management" Version="9.0.8" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Resource Include="Resources\File_icon.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Resources\Import_icon.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Resources\info_icon.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Resources\logo.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
 	  <Resource Include="Resources\logo.png">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Resource>
 	  <Resource Include="Resources\logo_light.png">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Resources\settings_icon.png">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Resource>
 	</ItemGroup>
