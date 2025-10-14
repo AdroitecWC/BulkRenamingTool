@@ -1,4 +1,5 @@
 ﻿using pfcls;
+using RenaimingToolCS.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -67,6 +68,7 @@ namespace RenaimingToolCS.CreoFunctions
             set { _session = value; }
         }
         #endregion
+        string proE = SettingsManager.Instance.CurrentCreoPath;
 
         public bool RunProe(string strWorkingDirectory)
         {
@@ -89,9 +91,11 @@ namespace RenaimingToolCS.CreoFunctions
                      //proePath = "D:\\PTC\\Creo 11.0.5.0\\Parametric\\bin\\parametric.exe";
                     string myDocsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                     string startPath = System.IO.Path.Combine(myDocsPath, "\\");
-                    System.Diagnostics.Process.Start(proePath, startPath);
+                    proE =  SettingsManager.Instance.CurrentCreoPath;
 
-                    System.Threading.Thread.Sleep(5000);
+                    System.Diagnostics.Process.Start(proE, startPath);
+
+                    System.Threading.Thread.Sleep(10000);
 
                     _iCcpfcAsynConnection = new CCpfcAsyncConnection();
                     _iIpfcAsynConnection = _iCcpfcAsynConnection.Connect(DBNull.Value, DBNull.Value, DBNull.Value, DBNull.Value);
@@ -170,7 +174,7 @@ namespace RenaimingToolCS.CreoFunctions
                 if (_iIpfcAsynConnection == null)
                 {
                     _iIpfcAsynConnection = CcpfcAsynchronousConnection.Start(
-                        Environment.GetEnvironmentVariable("PROE_PATH"),
+                        proE,
                         strWorkingDirectory);
                 }
 

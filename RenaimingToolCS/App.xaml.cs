@@ -12,25 +12,38 @@ namespace RenaimingToolCS
     /// </summary>
     public partial class App : Application
     {
-        //    protected override void OnStartup(StartupEventArgs e)
-        //    {
-        //        base.OnStartup(e);
+        protected override void OnStartup(StartupEventArgs e)
+       
+        {
+            base.OnStartup(e);
 
-        //        // GUI Mode
-        //        if (!LicenseManager.CheckLicense())
-        //        {
-        //            var licWin = new LicenseWindow();
-        //            bool? activated = licWin.ShowDialog();
-        //            if (activated != true)
-        //            {
-        //                // User canceled activation, exit app
-        //                Environment.Exit(0);
-        //            }
-        //        }
+            // Check if the license is valid.
+            if (LicenseManager.CheckLicense())
+            {
+                // If license is valid, open the main application window.
+                // Replace 'MainWindow' with the actual name of your main window if it's different.
+                var mainWindow = new MainWindow();
+                mainWindow.Show();
+            }
+            else
+            {
+                // If license is NOT valid, show the license activation window.
+                var licWin = new LicenseWindow();
+                bool? activated = licWin.ShowDialog(); // Show as a modal dialog
 
-        //        var intro = new LicenseWindow();
-        //        intro.Show();
-        //    }
+                if (activated == true)
+                {
+                    // If the user successfully activated the license, open the main window.
+                    var mainWindow = new MainWindow();
+                    mainWindow.Show();
+                }
+                else
+                {
+                    // If the user canceled or closed the license window, shut down the app.
+                    Application.Current.Shutdown();
+                }
+            }
+        }
     }
 
 }

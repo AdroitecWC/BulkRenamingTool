@@ -45,13 +45,58 @@ namespace RenaimingToolCS.Views
                 {
                     if (this.DataContext is RenamingViewModel vm)
                     {
-                        vm.InputFolderPath = dropped[0];
-                        vm.LoadFilesFromInputFolder(dropped[0]);
+                        string folderPath = dropped[0];
+                        vm.InputFolderPath = folderPath;
+                        vm.LoadFilesFromInputFolder(folderPath);
+                        UpdateInputFolderStatus(folderPath); 
                     }
                 }
             }
         }
+        private void UpdateInputFolderStatus(string selectedPath)
+        {
+            // Change the circle's background to green
+            InputStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
 
+            // Hide the number '1' and show the checkmark tick
+            InputStatusNumber.Visibility = Visibility.Collapsed;
+            InputStatusTick.Visibility = Visibility.Visible;
+
+            // Display the selected path in the new border and make it visible
+            SelectedInputPathTextBlock.Text = $"Selected: {selectedPath}";
+            SelectedInputPathBorder.Visibility = Visibility.Visible;
+        }
+        private void UpdateExportStatus()
+        {
+            ExportStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
+            ExportStatusNumber.Visibility = Visibility.Collapsed;
+            ExportStatusTick.Visibility = Visibility.Visible;
+        }
+
+        private void UpdateImportStatus(string selectedPath)
+        {
+            ImportStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
+            ImportStatusNumber.Visibility = Visibility.Collapsed;
+            ImportStatusTick.Visibility = Visibility.Visible;
+
+            SelectedImportPathTextBlock.Text = $"Selected: {System.IO.Path.GetFileName(selectedPath)}";
+            SelectedImportPathBorder.Visibility = Visibility.Visible;
+        }
+        private void ExportButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Update the UI to give the user immediate feedback that the action was started.
+            // The ViewModel command handles the actual export logic.
+            UpdateExportStatus();
+        }
+        private void UpdateOutputStatus(string selectedPath)
+        {
+            OutputStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
+            OutputStatusNumber.Visibility = Visibility.Collapsed;
+            OutputStatusTick.Visibility = Visibility.Visible;
+
+            SelectedOutputPathTextBlock.Text = $"Selected: {selectedPath}";
+            SelectedOutputPathBorder.Visibility = Visibility.Visible;
+        }
         private void OutputFolder_PreviewDragOver(object sender, DragEventArgs e)
         {
             e.Handled = true;
@@ -68,6 +113,8 @@ namespace RenaimingToolCS.Views
                     if (this.DataContext is RenamingViewModel vm)
                     {
                         vm.OutputFolderPath = dropped[0];
+                        UpdateOutputStatus(dropped[0]); 
+
                     }
                 }
             }
@@ -88,8 +135,11 @@ namespace RenaimingToolCS.Views
                 {
                     if (DataContext is RenamingViewModel vm)
                     {
-                        vm.ExcelFilePath = files[0];
-                        vm.LoadExcelMapping(files[0]);
+                        string filePath = files[0];
+                        vm.ExcelFilePath = filePath;
+                        vm.LoadExcelMapping(filePath);
+                        UpdateImportStatus(filePath); 
+
                     }
                 }
             }
@@ -101,6 +151,7 @@ namespace RenaimingToolCS.Views
             if (DataContext is RenamingViewModel vm && vm.BrowseInputFolderCommand.CanExecute(null))
             {
                 vm.BrowseInputFolderCommand.Execute(null);
+                UpdateInputFolderStatus(vm.InputFolderPath);
             }
         }
 
@@ -108,7 +159,13 @@ namespace RenaimingToolCS.Views
         {
             if (DataContext is RenamingViewModel vm && vm.BrowseExcelFileCommand.CanExecute(null))
             {
+                string previousPath = vm.ExcelFilePath;
                 vm.BrowseExcelFileCommand.Execute(null);
+
+                if (!string.IsNullOrEmpty(vm.ExcelFilePath) && vm.ExcelFilePath != previousPath)
+                {
+                    UpdateImportStatus(vm.ExcelFilePath); // <-- Add this
+                }
             }
         }
 
@@ -117,6 +174,7 @@ namespace RenaimingToolCS.Views
             if (DataContext is RenamingViewModel vm && vm.BrowseOutputFolderCommand.CanExecute(null))
             {
                 vm.BrowseOutputFolderCommand.Execute(null);
+                UpdateOutputStatus(vm.OutputFolderPath); // <-- Add this
             }
         }
 

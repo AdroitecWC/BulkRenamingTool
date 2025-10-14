@@ -6,10 +6,8 @@
         xmlns:local="clr-namespace:RenaimingToolCS.Views"
         mc:Ignorable="d"
         Title="SettingsWindow" Height="650" Width="800">
-    <!-- increased height -->
 
     <Window.Resources>
-        <!-- Global ToolTip Style -->
         <Style TargetType="ToolTip">
             <Setter Property="Background" Value="#333"/>
             <Setter Property="Foreground" Value="White"/>
@@ -24,38 +22,20 @@
     <Grid Margin="25">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Header -->
             <RowDefinition Height="Auto"/>
-            <!-- Creo Path label -->
             <RowDefinition Height="Auto"/>
-            <!-- Creo Path + browse -->
             <RowDefinition Height="Auto"/>
-
-            <!-- ProDirectory label -->
             <RowDefinition Height="Auto"/>
-            <!-- ProDirectory + browse -->
             <RowDefinition Height="Auto"/>
-
-            <!-- ProCommMsgExe label -->
             <RowDefinition Height="Auto"/>
-            <!-- ProCommMsgExe + browse -->
             <RowDefinition Height="Auto"/>
-
-            <!-- vb_api_register.bat label -->
             <RowDefinition Height="Auto"/>
-            <!-- vb_api_register.bat + browse -->
             <RowDefinition Height="Auto"/>
-
-            <!-- Common Files Folder label -->
             <RowDefinition Height="Auto"/>
-            <!-- Common Files Folder + browse -->
             <RowDefinition Height="Auto"/>
-
-            <!-- Action buttons -->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
         <TextBlock Grid.Row="0"
                    Text="Configure Creo Paths"
                    FontSize="20"
@@ -63,32 +43,32 @@
                    Foreground="#2c3e50"
                    Margin="0,0,0,20"/>
 
-        <!-- Creo Path Label -->
         <TextBlock Grid.Row="1"
                    Text="Full path to parametric.exe:"
                    FontWeight="SemiBold"
                    Margin="0,0,0,8"
                    Foreground="#333"/>
 
-        <!-- Creo Path TextBox + Browse -->
         <Grid Grid.Row="2" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Text="{Binding CreoPath, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="14"
-                     Padding="6"
-                     Grid.Column="0"
-                     Margin="0,0,10,0"
-                     Background="White"
-                     BorderBrush="#ccc"
-                     BorderThickness="1">
-                <TextBox.ToolTip>
-                    Current Creo executable path. You can paste or browse a new path.
-                </TextBox.ToolTip>
-            </TextBox>
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentCreoPath, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding CreoPathHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Current Creo executable path. Select from history or paste/browse a new path.
+                </ComboBox.ToolTip>
+            </ComboBox>
 
             <Button Content="Browse..."
                     Width="100"
@@ -106,32 +86,32 @@
             </Button>
         </Grid>
 
-        <!-- PRO_DIRECTORY Label -->
         <TextBlock Grid.Row="4"
                    Text="Path to Parametric folder (PRO_DIRECTORY):"
                    FontWeight="SemiBold"
                    Margin="0,0,0,8"
                    Foreground="#333"/>
 
-        <!-- PRO_DIRECTORY TextBox + Browse -->
         <Grid Grid.Row="5" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Text="{Binding ProDirectory, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="14"
-                     Padding="6"
-                     Grid.Column="0"
-                     Margin="0,0,10,0"
-                     Background="White"
-                     BorderBrush="#ccc"
-                     BorderThickness="1">
-                <TextBox.ToolTip>
-                    Select the Parametric folder.
-                </TextBox.ToolTip>
-            </TextBox>
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentProDirectory, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding ProDirectoryHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select the Parametric folder from history or browse for it.
+                </ComboBox.ToolTip>
+            </ComboBox>
 
             <Button Content="Browse..."
                     Width="100"
@@ -149,32 +129,32 @@
             </Button>
         </Grid>
 
-        <!-- PRO_COMM_MSG_EXE Label -->
         <TextBlock Grid.Row="6"
                    Text="Path to pro_comm_msg.exe (PRO_COMM_MSG_EXE):"
                    FontWeight="SemiBold"
                    Margin="0,0,0,8"
                    Foreground="#333"/>
 
-        <!-- PRO_COMM_MSG_EXE TextBox + Browse -->
         <Grid Grid.Row="7" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Text="{Binding ProCommMsgExe, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="14"
-                     Padding="6"
-                     Grid.Column="0"
-                     Margin="0,0,10,0"
-                     Background="White"
-                     BorderBrush="#ccc"
-                     BorderThickness="1">
-                <TextBox.ToolTip>
-                    Select pro_comm_msg.exe file.
-                </TextBox.ToolTip>
-            </TextBox>
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentProCommMsgExe, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding ProCommMsgExeHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select pro_comm_msg.exe file from history or browse for it.
+                </ComboBox.ToolTip>
+            </ComboBox>
 
             <Button Content="Browse..."
                     Width="100"
@@ -192,32 +172,32 @@
             </Button>
         </Grid>
 
-        <!-- VB_API_REGISTER.BAT Label -->
         <TextBlock Grid.Row="8"
                    Text="Path to vb_api_register.bat:"
                    FontWeight="SemiBold"
                    Margin="0,0,0,8"
                    Foreground="#333"/>
 
-        <!-- VB_API_REGISTER.BAT TextBox + Browse -->
         <Grid Grid.Row="9" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Text="{Binding VbApiRegisterBatPath, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="14"
-                     Padding="6"
-                     Grid.Column="0"
-                     Margin="0,0,10,0"
-                     Background="White"
-                     BorderBrush="#ccc"
-                     BorderThickness="1">
-                <TextBox.ToolTip>
-                    Select vb_api_register.bat file.
-                </TextBox.ToolTip>
-            </TextBox>
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentVbApiRegisterBatPath, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding VbApiRegisterBatPathHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select vb_api_register.bat file from history or browse for it.
+                </ComboBox.ToolTip>
+            </ComboBox>
 
             <Button Content="Browse..."
                     Width="100"
@@ -235,32 +215,32 @@
             </Button>
         </Grid>
 
-        <!-- Common Files Folder Label -->
         <TextBlock Grid.Row="10"
                    Text="Common Files folder (optional):"
                    FontWeight="SemiBold"
                    Margin="0,0,0,8"
                    Foreground="#333"/>
 
-        <!-- Common Files Folder TextBox + Browse -->
         <Grid Grid.Row="11" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Text="{Binding CommonFilesFolder, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="14"
-                     Padding="6"
-                     Grid.Column="0"
-                     Margin="0,0,10,0"
-                     Background="White"
-                     BorderBrush="#ccc"
-                     BorderThickness="1">
-                <TextBox.ToolTip>
-                    Select the Common Files folder (optional).
-                </TextBox.ToolTip>
-            </TextBox>
+            <ComboBox IsEditable="True"
+                      Text="{Binding CurrentCommonFilesFolder, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding CommonFilesFolderHistory}"
+                      FontSize="14"
+                      Padding="6"
+                      Grid.Column="0"
+                      Margin="0,0,10,0"
+                      Background="White"
+                      BorderBrush="#ccc"
+                      BorderThickness="1">
+                <ComboBox.ToolTip>
+                    Select the Common Files folder from history or browse for it (optional).
+                </ComboBox.ToolTip>
+            </ComboBox>
 
             <Button Content="Browse..."
                     Width="100"
@@ -278,7 +258,6 @@
             </Button>
         </Grid>
 
-        <!-- Action Buttons -->
         <StackPanel Grid.Row="12"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
@@ -312,7 +291,7 @@
                 </Button.ToolTip>
             </Button>
 
-            <Button Content="OK"
+            <Button Content="Restart"
                     Width="80"
                     Command="{Binding ConfirmCommand}"
                     Background="#2980b9"

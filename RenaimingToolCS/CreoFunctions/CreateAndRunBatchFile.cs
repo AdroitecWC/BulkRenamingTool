@@ -70,7 +70,7 @@ exit /b 0
                 // Save batch file in temp folder (or any folder you want)
                 string batchFilePath = Path.Combine(Path.GetTempPath(), "RegisterCreoCOM.bat");
 
-                File.WriteAllText(batchFilePath, batchContent);
+                File.WriteAllText(batchFilePath, batchContent, new System.Text.UTF8Encoding(false));
 
                 // Run the batch file as admin
                 RunBatchAsAdmin(batchFilePath);
@@ -115,5 +115,6 @@ exit /b 0
             var wp = new WindowsPrincipal(wi);
             return wp.IsInRole(WindowsBuiltInRole.Administrator);
         }
+
     }
 }

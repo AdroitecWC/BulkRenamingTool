@@ -3,6 +3,9 @@ using Ookii.Dialogs.Wpf;
 using RenaimingToolCS.CreoFunctions;
 using RenaimingToolCS.Helpers;
 using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Input;
 
 namespace RenaimingToolCS.ViewModels
@@ -11,62 +14,79 @@ namespace RenaimingToolCS.ViewModels
     {
         public event Action RequestClose;
 
-        // Settings properties for all 5 paths
-        private string _creoPath;
-        public string CreoPath
+        #region Properties
+        // Properties for the currently selected path in the ComboBox
+        private string _currentCreoPath;
+        public string CurrentCreoPath
         {
-            get => _creoPath;
-            set => SetProperty(ref _creoPath, value);
+            get => _currentCreoPath;
+            set => SetProperty(ref _currentCreoPath, value);
         }
 
-        private string _proDirectory;
-        public string ProDirectory
+        private string _currentProDirectory;
+        public string CurrentProDirectory
         {
-            get => _proDirectory;
-            set => SetProperty(ref _proDirectory, value);
+            get => _currentProDirectory;
+            set => SetProperty(ref _currentProDirectory, value);
         }
 
-        private string _proCommMsgExe;
-        public string ProCommMsgExe
+        private string _currentProCommMsgExe;
+        public string CurrentProCommMsgExe
         {
-            get => _proCommMsgExe;
-            set => SetProperty(ref _proCommMsgExe, value);
+            get => _currentProCommMsgExe;
+            set => SetProperty(ref _currentProCommMsgExe, value);
         }
 
-        private string _vbApiRegisterBatPath;
-        public string VbApiRegisterBatPath
+        private string _currentVbApiRegisterBatPath;
+        public string CurrentVbApiRegisterBatPath
         {
-            get => _vbApiRegisterBatPath;
-            set => SetProperty(ref _vbApiRegisterBatPath, value);
+            get => _currentVbApiRegisterBatPath;
+            set => SetProperty(ref _currentVbApiRegisterBatPath, value);
         }
 
-        private string _commonFilesFolder;
-        public string CommonFilesFolder
+        private string _currentCommonFilesFolder;
+        public string CurrentCommonFilesFolder
         {
-            get => _commonFilesFolder;
-            set => SetProperty(ref _commonFilesFolder, value);
+            get => _currentCommonFilesFolder;
+            set => SetProperty(ref _currentCommonFilesFolder, value);
         }
 
-        // Commands for browse buttons
+        // History collections bound to the ComboBox's ItemsSource
+        public ObservableCollection<string> CreoPathHistory { get; }
+        public ObservableCollection<string> ProDirectoryHistory { get; }
+        public ObservableCollection<string> ProCommMsgExeHistory { get; }
+        public ObservableCollection<string> VbApiRegisterBatPathHistory { get; }
+        public ObservableCollection<string> CommonFilesFolderHistory { get; }
+        #endregion
+
+        #region Commands
         public ICommand BrowseCreoPathCommand { get; }
         public ICommand BrowseProDirectoryCommand { get; }
         public ICommand BrowseProCommMsgExeCommand { get; }
         public ICommand BrowseVbApiRegisterBatCommand { get; }
         public ICommand BrowseCommonFilesFolderCommand { get; }
-
-        // Save / Cancel / Confirm commands
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand ConfirmCommand { get; }
+        #endregion
 
         public SettingsWindowViewModel()
         {
-            // Load values from SettingsManager or default to empty string
-            CreoPath = SettingsManager.Instance.CreoPath ?? string.Empty;
-            ProDirectory = SettingsManager.Instance.ProDirectory ?? string.Empty;
-            ProCommMsgExe = SettingsManager.Instance.ProCommMsgExe ?? string.Empty;
-            VbApiRegisterBatPath = SettingsManager.Instance.VbApiRegisterBatPath ?? string.Empty;
-            CommonFilesFolder = SettingsManager.Instance.CommonFilesFolder ?? string.Empty;
+            // Load current values and history from SettingsManager
+            CurrentCreoPath = SettingsManager.Instance.CurrentCreoPath;
+            CreoPathHistory = SettingsManager.Instance.CreoPathHistory;
+
+            CurrentProDirectory = SettingsManager.Instance.CurrentProDirectory;
+            ProDirectoryHistory = SettingsManager.Instance.ProDirectoryHistory;
+
+            CurrentProCommMsgExe = SettingsManager.Instance.CurrentProCommMsgExe;
+            ProCommMsgExeHistory = SettingsManager.Instance.ProCommMsgExeHistory;
+
+            CurrentVbApiRegisterBatPath = SettingsManager.Instance.CurrentVbApiRegisterBatPath;
+            VbApiRegisterBatPathHistory = SettingsManager.Instance.VbApiRegisterBatPathHistory;
+
+            CurrentCommonFilesFolder = SettingsManager.Instance.CurrentCommonFilesFolder;
+            CommonFilesFolderHistory = SettingsManager.Instance.CommonFilesFolderHistory;
 
             // Initialize commands
             BrowseCreoPathCommand = new RelayCommand(BrowseForCreoPath);
@@ -88,43 +108,116 @@ namespace RenaimingToolCS.ViewModels
 
         private void OnConfirm()
         {
-            //SaveSettings();
-            RequestClose?.Invoke();
+            // Confirm restart with user
+            var result = MessageBox.Show("Do you want to restart the application to apply the new settings?",
+                                         "Confirm Restart", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+
+
+
+                var res = new RenamingViewModel();
+                    res.RestartApplication();
+            }
         }
 
+       
         private void OnCancel()
         {
-            // Optionally reset changes
+            // Discard changes and close
             RequestClose?.Invoke();
+        }
+        private void closeCreo()
+        {
+            string[] creoProcessNames = { "xtop", "creosvcs", "nmsd", "pfclscom", "pro_comm_msg" };
+
+            foreach (var name in creoProcessNames)
+            {
+                var processes = Process.GetProcessesByName(name);
+                foreach (var process in processes)
+                {
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit();
+                        Console.WriteLine($"Killed {name} process: {process.Id}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to kill {name} process {process.Id}: {ex.Message}");
+                    }
+                }
+
+                if (processes.Length == 0)
+                {
+                    Console.WriteLine($"No {name} processes found.");
+                }
+            }
         }
 
         private void SaveSettings()
         {
-
-
-            // Save each setting to your SettingsManager or wherever you persist configs
-            
-
-            SettingsManager.Instance.CreoPath = CreoPath;
-            SettingsManager.Instance.ProDirectory = ProDirectory;
-            SettingsManager.Instance.ProCommMsgExe = ProCommMsgExe;
-            SettingsManager.Instance.VbApiRegisterBatPath = VbApiRegisterBatPath;
-            SettingsManager.Instance.CommonFilesFolder = CommonFilesFolder;
-
-            var bat = new CreateAndRunBatchFile
+            try
             {
-                CreoPath = SettingsManager.Instance.CreoPath,
-                ProDirectory = SettingsManager.Instance.ProDirectory,
-                ProCommMsgExe = SettingsManager.Instance.ProCommMsgExe,
-                VbApiRegisterBatPath = SettingsManager.Instance.VbApiRegisterBatPath
-                // CommonFilesFolder might not be needed for batch
-            };
+                // Show message box and get user response
+                var result = MessageBox.Show(
+                    "Do you want to close Creo processes before saving settings?",
+                    "Info",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
 
-            bat.CreateAndRunBatchFileMethod();
-            Console.WriteLine("Settings saved.");
+                if (result == MessageBoxResult.Yes)
+                {
+                    // User clicked Yes -> close Creo processes
+                    closeCreo();
+                }
+                else if (result == MessageBoxResult.No)
+                {
+                    // User clicked No -> skip closing Creo, proceed to save settings
+                    return;
+                }
+                
+
+                // Proceed with saving settings after user's decision
+
+                // 1. Update the 'Current' path properties in the SettingsManager
+                SettingsManager.Instance.CurrentCreoPath = CurrentCreoPath;
+                SettingsManager.Instance.CurrentProDirectory = CurrentProDirectory;
+                SettingsManager.Instance.CurrentProCommMsgExe = CurrentProCommMsgExe;
+                SettingsManager.Instance.CurrentVbApiRegisterBatPath = CurrentVbApiRegisterBatPath;
+                SettingsManager.Instance.CurrentCommonFilesFolder = CurrentCommonFilesFolder;
+
+                // 2. Add the current values to their respective history lists
+                SettingsManager.Instance.AddPathToHistory(CurrentCreoPath, CreoPathHistory);
+                SettingsManager.Instance.AddPathToHistory(CurrentProDirectory, ProDirectoryHistory);
+                SettingsManager.Instance.AddPathToHistory(CurrentProCommMsgExe, ProCommMsgExeHistory);
+                SettingsManager.Instance.AddPathToHistory(CurrentVbApiRegisterBatPath, VbApiRegisterBatPathHistory);
+                SettingsManager.Instance.AddPathToHistory(CurrentCommonFilesFolder, CommonFilesFolderHistory);
+
+                // 3. Persist all changes to the settings file
+                SettingsManager.Instance.Save();
+
+                // 4. Run the batch file creation logic (if still needed)
+                var bat = new CreateAndRunBatchFile
+                {
+                    CreoPath = SettingsManager.Instance.CurrentCreoPath,
+                    ProDirectory = SettingsManager.Instance.CurrentProDirectory,
+                    ProCommMsgExe = SettingsManager.Instance.CurrentProCommMsgExe,
+                    VbApiRegisterBatPath = SettingsManager.Instance.CurrentVbApiRegisterBatPath
+                };
+                bat.CreateAndRunBatchFileMethod();
+
+                Console.WriteLine("Settings saved.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error closing Creo processes: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
         }
 
-        // Browse dialogs implementations
+        #region Browse Dialogs
         private void BrowseForCreoPath()
         {
             var dialog = new OpenFileDialog
@@ -132,10 +225,9 @@ namespace RenaimingToolCS.ViewModels
                 Filter = "Creo Executable (parametric.exe)|parametric.exe",
                 Title = "Select parametric.exe"
             };
-
             if (dialog.ShowDialog() == true)
             {
-                CreoPath = dialog.FileName;
+                CurrentCreoPath = dialog.FileName;
             }
         }
 
@@ -145,10 +237,9 @@ namespace RenaimingToolCS.ViewModels
             {
                 Description = "Select the Parametric folder (PRO_DIRECTORY)"
             };
-
             if (dialog.ShowDialog() == true)
             {
-                ProDirectory = dialog.SelectedPath;
+                CurrentProDirectory = dialog.SelectedPath;
             }
         }
 
@@ -159,10 +250,9 @@ namespace RenaimingToolCS.ViewModels
                 Filter = "Executable (pro_comm_msg.exe)|pro_comm_msg.exe",
                 Title = "Select pro_comm_msg.exe"
             };
-
             if (dialog.ShowDialog() == true)
             {
-                ProCommMsgExe = dialog.FileName;
+                CurrentProCommMsgExe = dialog.FileName;
             }
         }
 
@@ -173,10 +263,9 @@ namespace RenaimingToolCS.ViewModels
                 Filter = "Batch File (vb_api_register.bat)|vb_api_register.bat",
                 Title = "Select vb_api_register.bat"
             };
-
             if (dialog.ShowDialog() == true)
             {
-                VbApiRegisterBatPath = dialog.FileName;
+                CurrentVbApiRegisterBatPath = dialog.FileName;
             }
         }
 
@@ -186,11 +275,11 @@ namespace RenaimingToolCS.ViewModels
             {
                 Description = "Select the Common Files folder"
             };
-
             if (dialog.ShowDialog() == true)
             {
-                CommonFilesFolder = dialog.SelectedPath;
+                CurrentCommonFilesFolder = dialog.SelectedPath;
             }
         }
+        #endregion
     }
 }

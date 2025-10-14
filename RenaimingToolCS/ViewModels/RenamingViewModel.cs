@@ -17,6 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace RenaimingToolCS.ViewModels
@@ -307,18 +308,40 @@ namespace RenaimingToolCS.ViewModels
                     {
                         var worksheet = workbook.Worksheets.Add("Files");
 
-
+                        // Set headers
                         worksheet.Cell(1, 1).Value = "Original Name";
                         worksheet.Cell(1, 2).Value = "New Name";
                         worksheet.Cell(1, 3).Value = "File Path";
 
+                        // Apply style to headers
+                        var headerRange = worksheet.Range("A1:C1");
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+                        headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                        // Add data
                         int row = 2;
                         foreach (var file in Files)
                         {
-                            worksheet.Cell(row, 3).Value = file.FullPath;       // Add FullPath property in your model
                             worksheet.Cell(row, 1).Value = file.OriginalName;
+                            worksheet.Cell(row, 2).Value = file.NewName;      // Ensure NewName exists in your model
+                            worksheet.Cell(row, 3).Value = file.FullPath;
+
+                            // Apply borders to the row
+                            var dataRange = worksheet.Range(row, 1, row, 3);
+                            dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                            dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
                             row++;
                         }
+
+                        // Auto-fit columns
+                        worksheet.Columns().AdjustToContents();
+
+                        // Optional: Freeze top row
+                        worksheet.SheetView.FreezeRows(1);
 
                         workbook.SaveAs(saveFileDialog.FileName);
                     }
@@ -440,7 +463,7 @@ namespace RenaimingToolCS.ViewModels
                 progressForm.Show();
                 CreoFileHelper.PurgeFolder(folderPath);
                 CreoSessionManager.Instance.InitializeCreoSession();
-                CloseBrowser();
+                //CloseBrowser();
                 var session = CreoSessionManager.Instance.Session;
                 var baseSession = (IpfcBaseSession)session;
                 session.EraseUndisplayedModels();
@@ -460,10 +483,14 @@ namespace RenaimingToolCS.ViewModels
                     {
                         // --- ADDED --- Store the original name before it changes.
                         string originalInstanceName = model.InstanceName;
-
+                        //for custom names
+                        string confirmedNewName = ShowRenameConfirmationPopup(originalInstanceName, newName);
                         try
                         {
+                            //model.Display();
+
                             model.Rename(newName, true);
+                            //model.Rename(confirmedNewName, true);
                             model.Save();
                             renamedCount++;
 
@@ -500,7 +527,7 @@ namespace RenaimingToolCS.ViewModels
                 string logFilePath = Path.Combine(folderPath, $"RenameLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
                 File.WriteAllText(logFilePath, finalLog.ToString());
                 progressForm.Close();
-
+                
                 MessageBoxResult result = MessageBox.Show(
                     $"{renamedCount} file(s) renamed successfully.\n{(errorMessages.Length > 0 ? "Some errors occurred." : "")}\n\nWould you like to open the log file?",
                     "Rename Complete", MessageBoxButton.YesNo, MessageBoxImage.Information);
@@ -528,6 +555,217 @@ namespace RenaimingToolCS.ViewModels
                 }
             }
         }
+        private string ShowRenameConfirmationPopup1(string originalName, string suggestedNewName)
+        {
+            // Create a custom window for rename confirmation
+            var renameWindow = new Window
+            {
+                Title = "Rename Confirmation",
+                Width = 400,
+                Height = 200,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                Topmost = true, // Ensures window is on top of all other applications
+                WindowStyle = WindowStyle.SingleBorderWindow,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            // Create a stack panel for layout
+            var stackPanel = new StackPanel
+            {
+                Margin = new Thickness(20)
+            };
+
+            // Original name label
+            var originalNameLabel = new TextBlock
+            {
+                Text = $"Original Name: {originalName}",
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // New name text box
+            var newNameTextBox = new TextBox
+            {
+                Text = suggestedNewName,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // Button panel
+            var buttonPanel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            // Yes button
+            var yesButton = new Button
+            {
+                Content = "Confirm",
+                Width = 100,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+
+            // No button
+            var noButton = new Button
+            {
+                Content = "Cancel",
+                Width = 100
+            };
+
+            string finalNewName = suggestedNewName;
+            bool isConfirmed = false;
+
+            // Yes button click event
+            yesButton.Click += (s, e) =>
+            {
+                finalNewName = newNameTextBox.Text.Trim();
+                isConfirmed = true;
+                renameWindow.Close();
+            };
+
+            // No button click event
+            noButton.Click += (s, e) =>
+            {
+                isConfirmed = false;
+                renameWindow.Close();
+            };
+
+            // Add controls to button panel
+            buttonPanel.Children.Add(yesButton);
+            buttonPanel.Children.Add(noButton);
+
+            // Add controls to stack panel
+            stackPanel.Children.Add(originalNameLabel);
+            stackPanel.Children.Add(new TextBlock { Text = "New Name:", Margin = new Thickness(0, 0, 0, 5) });
+            stackPanel.Children.Add(newNameTextBox);
+            stackPanel.Children.Add(buttonPanel);
+
+            // Set content of window
+            renameWindow.Content = stackPanel;
+
+            // Show dialog and wait
+            renameWindow.ShowDialog();
+
+            // Return the final name or null if cancelled
+            return isConfirmed ? finalNewName : null;
+        }
+        private string ShowRenameConfirmationPopup(string originalName, string suggestedNewName)
+        {
+            var renameWindow = new Window
+            {
+                Title = "Rename Confirmation",
+                Width = 400,
+                Height = 200,
+                Topmost = true,
+                WindowStyle = WindowStyle.SingleBorderWindow,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            // Get the full screen bounds
+            var screenBounds = System.Windows.SystemParameters.WorkArea;
+
+            // Calculate the right-side position with 20% margin
+            double screenWidth = screenBounds.Width;
+            double marginWidth = screenWidth * 0.1;
+
+            // Position the window
+            renameWindow.Left = screenBounds.Right - marginWidth - renameWindow.Width;
+            renameWindow.Top = screenBounds.Top + (screenBounds.Height - renameWindow.Height) / 2;
+
+            var stackPanel = new StackPanel
+            {
+                Margin = new Thickness(20)
+            };
+
+            // Original name label
+            var originalNameLabel = new TextBlock
+            {
+                Text = $"Original Name: {originalName}",
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // New name text box
+            var newNameTextBox = new TextBox
+            {
+                Text = suggestedNewName,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+
+            // Button panel
+            var buttonPanel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            // Yes button
+            var yesButton = new Button
+            {
+                Content = "Confirm",
+                Width = 100,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+
+            // No button
+            var noButton = new Button
+            {
+                Content = "Cancel",
+                Width = 100
+            };
+
+            string finalNewName = suggestedNewName;
+            bool isConfirmed = false;
+
+            // Yes button click event
+            yesButton.Click += (s, e) =>
+            {
+                finalNewName = newNameTextBox.Text.Trim();
+                isConfirmed = true;
+                renameWindow.Close();
+            };
+
+            // No button click event
+            noButton.Click += (s, e) =>
+            {
+                isConfirmed = false;
+                renameWindow.Close();
+            };
+
+            // Add controls to button panel
+            buttonPanel.Children.Add(yesButton);
+            buttonPanel.Children.Add(noButton);
+
+            // Add controls to stack panel
+            stackPanel.Children.Add(originalNameLabel);
+            stackPanel.Children.Add(new TextBlock { Text = "New Name:", Margin = new Thickness(0, 0, 0, 5) });
+            stackPanel.Children.Add(newNameTextBox);
+            stackPanel.Children.Add(buttonPanel);
+
+            // Set content of window
+            renameWindow.Content = stackPanel;
+
+            // Show dialog and wait
+            renameWindow.ShowDialog();
+
+            // Return the final name or null if cancelled
+            return isConfirmed ? finalNewName : null;
+        }
+        public void RestartApplication()
+        {
+           
+            try
+            {
+                
+
+                // Restart the application
+                System.Windows.Forms.Application.Restart();
+                System.Windows.Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to restart the application: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void CopyDirectory(string sourceDir, string targetDir)
         {
             Directory.CreateDirectory(targetDir);
