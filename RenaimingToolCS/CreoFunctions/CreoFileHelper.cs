@@ -122,7 +122,19 @@ namespace RenaimingToolCS.ViewModels.Creo
             // Default fallback
             return (EpfcModelType)(-1); // or EpfcMDL_PART as a default if necessary
         }
+        public static bool IsCreoFile(string filePath)
+        {
+            string ext = Path.GetExtension(filePath).ToLower();
+            return ext == ".prt" || ext == ".asm" || ext == ".drw";
+        }
 
+        // ← Paste it here
+        public static bool IsNonCreoFile(string filePath)
+        {
+            string ext = Path.GetExtension(filePath).ToLower();
+            // Anything except Creo file extensions
+            return ext != ".prt" && ext != ".asm" && ext != ".drw";
+        }
         public static void RunPurge(string[] args)
         {
             // Step 1: Detect machine type
