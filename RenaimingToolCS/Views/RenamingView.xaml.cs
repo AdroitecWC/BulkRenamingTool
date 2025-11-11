@@ -55,12 +55,8 @@ namespace RenaimingToolCS.Views
         }
         private void UpdateInputFolderStatus(string selectedPath)
         {
-            // Change the circle's background to green
+            // Change the circle's background to green and keep the number visible
             InputStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
-
-            // Hide the number '1' and show the checkmark tick
-            InputStatusNumber.Visibility = Visibility.Collapsed;
-            InputStatusTick.Visibility = Visibility.Visible;
 
             // Display the selected path in the new border and make it visible
             SelectedInputPathTextBlock.Text = $"Selected: {selectedPath}";
@@ -68,16 +64,14 @@ namespace RenaimingToolCS.Views
         }
         private void UpdateExportStatus()
         {
+            // Change the circle's background to green and keep the number visible
             ExportStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
-            ExportStatusNumber.Visibility = Visibility.Collapsed;
-            ExportStatusTick.Visibility = Visibility.Visible;
         }
 
         private void UpdateImportStatus(string selectedPath)
         {
+            // Change the circle's background to green and keep the number visible
             ImportStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
-            ImportStatusNumber.Visibility = Visibility.Collapsed;
-            ImportStatusTick.Visibility = Visibility.Visible;
 
             SelectedImportPathTextBlock.Text = $"Selected: {System.IO.Path.GetFileName(selectedPath)}";
             SelectedImportPathBorder.Visibility = Visibility.Visible;
@@ -90,9 +84,8 @@ namespace RenaimingToolCS.Views
         }
         private void UpdateOutputStatus(string selectedPath)
         {
+            // Change the circle's background to green and keep the number visible
             OutputStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
-            OutputStatusNumber.Visibility = Visibility.Collapsed;
-            OutputStatusTick.Visibility = Visibility.Visible;
 
             SelectedOutputPathTextBlock.Text = $"Selected: {selectedPath}";
             SelectedOutputPathBorder.Visibility = Visibility.Visible;

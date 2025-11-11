@@ -5,7 +5,7 @@ VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RenaimingToolCS", "RenaimingToolCS\RenaimingToolCS.csproj", "{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "RenamingTool1", "RenamingTool1\RenamingTool1.vdproj", "{6AF244C1-C226-E6EC-7B57-04835C6973F6}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Renaming", "Renaming\Renaming.vdproj", "{CABCCEF6-712D-9CF2-1A20-4FEFB5105129}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +17,8 @@ Global
 		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0D9BC31C-3519-49FD-B9F7-8F9C4166CEC1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6AF244C1-C226-E6EC-7B57-04835C6973F6}.Debug|Any CPU.ActiveCfg = Debug
-		{6AF244C1-C226-E6EC-7B57-04835C6973F6}.Release|Any CPU.ActiveCfg = Release
+		{CABCCEF6-712D-9CF2-1A20-4FEFB5105129}.Debug|Any CPU.ActiveCfg = Debug
+		{CABCCEF6-712D-9CF2-1A20-4FEFB5105129}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

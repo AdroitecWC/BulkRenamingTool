@@ -521,6 +521,10 @@ namespace RenaimingToolCS.ViewModels
                             renamedCount++;
                             progressForm.UpdateProgress(percent, $"Renamed ({currentIndex}/{total}): '{file.OriginalName}' to '{confirmedNewName}'");
                             renamedModels.AppendLine($"SUCCESS: Renamed '{file.OriginalName}' to '{confirmedNewName}'");
+                            
+                            // --- CORRECTED --- Use the stored original name for logging.
+                            progressForm.UpdateProgress(percent, $"Renamed ({currentIndex}/{total}): '{originalInstanceName}' to '{newName}'");
+                            renamedModels.AppendLine($"SUCCESS: Renamed '{originalInstanceName}' to '{newName}'");
                         }
                         catch (Exception ex)
                         {
@@ -549,6 +553,7 @@ namespace RenaimingToolCS.ViewModels
 
                 string logFilePath = Path.Combine(folderPath, $"RenameLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
                 File.WriteAllText(logFilePath, finalLog.ToString());
+                CreoFileHelper.PurgeUsingBatch(folderPath);
                 progressForm.Close();
 
                 MessageBoxResult result = MessageBox.Show(

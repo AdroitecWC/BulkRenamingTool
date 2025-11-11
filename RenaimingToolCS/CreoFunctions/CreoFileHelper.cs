@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.Win32;
 using pfcls;
 using RenaimingToolCS.CreoFunctions;
 using System.Diagnostics;
@@ -31,7 +32,147 @@ namespace RenaimingToolCS.ViewModels.Creo
                 // Optional: log error
             }
         }
+        public static void PurgeUsingBatch(string workingDirectory)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(workingDirectory))
+                    throw new ArgumentNullException(nameof(workingDirectory));
 
+                // Find purge.bat in Creo bin directory
+                string creoDirectory = GetCreoDirectory();
+                if (string.IsNullOrEmpty(creoDirectory))
+                    throw new Exception("Creo installation directory not found");
+
+                string purgeBatPath = Path.Combine(creoDirectory, "Parametric", "bin", "purge.bat");
+
+                if (!File.Exists(purgeBatPath))
+                {
+                    // Try alternative locations
+                    string[] alternativePaths = {
+                    Path.Combine(creoDirectory, "bin", "purge.bat"),
+                    Path.Combine(Environment.GetEnvironmentVariable("PATH").Split(';')[0], "purge.bat")
+                };
+
+                    foreach (var path in alternativePaths)
+                    {
+                        if (File.Exists(path))
+                        {
+                            purgeBatPath = path;
+                            break;
+                        }
+                    }
+                }
+
+                if (!File.Exists(purgeBatPath))
+                    throw new FileNotFoundException("purge.bat not found in Creo installation");
+
+                // Execute the batch file
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/C cd /d \"{workingDirectory}\" && \"{purgeBatPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Purge failed: {ex.Message}", ex);
+            }
+        }
+        private static string GetCreoDirectory()
+        {
+            // First check PROE_PATH environment variable for Parametric.exe
+            string proePath = Environment.GetEnvironmentVariable("PROE_PATH");
+            if (!string.IsNullOrEmpty(proePath))
+            {
+                // PROE_PATH typically points to the bin directory containing parametric.exe
+                string parametricPath = Path.Combine(proePath, "parametric.exe");
+                if (File.Exists(parametricPath))
+                {
+                    // Go up two levels from bin to get the Creo installation directory
+                    // e.g., from "C:\PTC\Creo 3.0\M120\Parametric\bin" to "C:\PTC\Creo 3.0\M120"
+                    DirectoryInfo binDir = new DirectoryInfo(proePath);
+                    if (binDir.Parent != null && binDir.Parent.Parent != null)
+                    {
+                        return binDir.Parent.Parent.FullName;
+                    }
+                }
+
+                // If PROE_PATH doesn't contain parametric.exe, check if it's already the root
+                if (Directory.Exists(Path.Combine(proePath, "Parametric", "bin")))
+                {
+                    return proePath;
+                }
+            }
+            // Check CREO_DIRECTORY environment variable
+            string creoDir = Environment.GetEnvironmentVariable("CREO_DIRECTORY");
+            if (!string.IsNullOrEmpty(creoDir) && Directory.Exists(creoDir))
+                return creoDir;
+
+            // Check registry for PTC installations
+            try
+            {
+                // Common PTC registry paths
+                string[] registryPaths = {
+                @"SOFTWARE\PTC\Creo Parametric",
+                @"SOFTWARE\WOW6432Node\PTC\Creo Parametric",
+                @"SOFTWARE\PTC\PTC Creo Parametric",
+                @"SOFTWARE\WOW6432Node\PTC\PTC Creo Parametric"
+            };
+
+                foreach (var regPath in registryPaths)
+                {
+                    using (var key = Registry.LocalMachine.OpenSubKey(regPath))
+                    {
+                        if (key != null)
+                        {
+                            foreach (var subKeyName in key.GetSubKeyNames())
+                            {
+                                using (var subKey = key.OpenSubKey(subKeyName))
+                                {
+                                    var installLocation = subKey?.GetValue("InstallDir") as string;
+                                    if (!string.IsNullOrEmpty(installLocation) && Directory.Exists(installLocation))
+                                        return installLocation;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // Check common installation paths
+            string[] commonPaths = {
+            @"C:\Program Files\PTC\Creo 9.0.0.0",
+            @"C:\Program Files\PTC\Creo 8.0.0.0",
+            @"C:\Program Files\PTC\Creo 7.0.0.0",
+            @"C:\Program Files\PTC\Creo 6.0.0.0",
+            @"C:\Program Files\PTC\Creo 5.0.0.0",
+            @"C:\Program Files\PTC\Creo 4.0",
+            @"C:\Program Files\PTC\Creo 3.0",
+            @"C:\Program Files\PTC\Creo 2.0",
+            @"C:\PTC\Creo 9.0.0.0",
+            @"C:\PTC\Creo 8.0.0.0",
+            @"C:\PTC\Creo 7.0.0.0",
+            @"C:\PTC\Creo 6.0.0.0",
+            @"C:\PTC\Creo 5.0.0.0",
+            @"C:\PTC\Creo 4.0",
+            @"C:\PTC\Creo 3.0",
+            @"C:\PTC\Creo 2.0",
+        };
+
+            foreach (var path in commonPaths)
+            {
+                if (Directory.Exists(path))
+                    return path;
+            }
+
+            return null;
+        }
         public static void OpenAllDrawingsInFolder(string folderPath)
         {
             var session = CreoSessionManager.Instance.Session;

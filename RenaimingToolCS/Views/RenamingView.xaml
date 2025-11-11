@@ -84,7 +84,8 @@
                     <ControlTemplate TargetType="Expander">
                         <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="8" SnapsToDevicePixels="True">
                             <DockPanel>
-                                <ToggleButton x:Name="HeaderSite" DockPanel.Dock="Top" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" 
+                                <ToggleButton x:Name="HeaderSite" DockPanel.Dock="Top" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                              Content="{TemplateBinding Header}"
                                               Style="{StaticResource ExpanderHeaderToggleButtonStyle}"/>
                                 <ContentPresenter x:Name="ExpandSite" DockPanel.Dock="Bottom" Visibility="Collapsed" Margin="12,0,12,12"/>
                             </DockPanel>
@@ -189,17 +190,13 @@
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Grid Width="24" Height="24" Margin="0,0,10,0">
-                                    <Border x:Name="InputStatusCircle" Background="#777" CornerRadius="12">
-                                        <TextBlock x:Name="InputStatusNumber" Text="1" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock x:Name="InputStatusTick" Text="✅" FontSize="12" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
+                                <Border x:Name="InputStatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
+                                    <TextBlock x:Name="InputStatusNumber" Text="1" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
                                 <TextBlock Text="Select Input Folder" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Label Content="Select Input Folder" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
                             <Grid AllowDrop="True" Drop="InputFolder_Drop" PreviewDragOver="InputFolder_PreviewDragOver"  
                                   MouseLeftButtonDown="InputDropZone_MouseLeftButtonDown" Cursor="Hand"
                                   MinHeight="100" Background="#F9F9F9">
@@ -223,17 +220,13 @@
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Grid Width="24" Height="24" Margin="0,0,10,0">
-                                    <Border x:Name="ExportStatusCircle" Background="#777" CornerRadius="12">
-                                        <TextBlock x:Name="ExportStatusNumber" Text="2" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock x:Name="ExportStatusTick" Text="✅" FontSize="12" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
-                                <TextBlock Text="Export to Excel (Optional)" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                <Border x:Name="ExportStatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
+                                    <TextBlock x:Name="ExportStatusNumber" Text="2" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="Export to Excel" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Label Content="Export file list to Excel" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
                             <Button Content="Export File List" Command="{Binding DownloadExcelCommand}" Padding="10" Click="ExportButton_Click" />
                         </StackPanel>
                     </Expander>
@@ -241,17 +234,13 @@
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Grid Width="24" Height="24" Margin="0,0,10,0">
-                                    <Border x:Name="ImportStatusCircle" Background="#777" CornerRadius="12">
-                                        <TextBlock x:Name="ImportStatusNumber" Text="3" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock x:Name="ImportStatusTick" Text="✅" FontSize="12" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
-                                <TextBlock Text="Import Excel (Optional)" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                <Border x:Name="ImportStatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
+                                    <TextBlock x:Name="ImportStatusNumber" Text="3" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="Import Excel" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Label Content="Import new names from Excel" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
                             <Grid AllowDrop="True" Drop="Excel_Drop" PreviewDragOver="Excel_PreviewDragOver"  
                                   MouseLeftButtonDown="ExcelDropZone_MouseLeftButtonDown" Cursor="Hand"
                                   MinHeight="100" Background="#F9F9F9">
@@ -276,17 +265,13 @@
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Grid Width="24" Height="24" Margin="0,0,10,0">
-                                    <Border x:Name="OutputStatusCircle" Background="#777" CornerRadius="12">
-                                        <TextBlock x:Name="OutputStatusNumber" Text="4" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock x:Name="OutputStatusTick" Text="✅" FontSize="12" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
+                                <Border x:Name="OutputStatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
+                                    <TextBlock x:Name="OutputStatusNumber" Text="4" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
                                 <TextBlock Text="Output Destination" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Label Content="Select an output destination" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
                             <Grid AllowDrop="True" Drop="OutputFolder_Drop" PreviewDragOver="OutputFolder_PreviewDragOver"  
                                   MouseLeftButtonDown="OutputDropZone_MouseLeftButtonDown" Cursor="Hand"
                                   MinHeight="100" Background="#F9F9F9">
@@ -311,14 +296,13 @@
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Border Background="#777" CornerRadius="12" Width="24" Height="24" Margin="0,0,10,0">
-                                    <TextBlock Text="5" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
+                                    <TextBlock Text="5" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <TextBlock Text="Rename Files" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Label Content="Execute the rename process" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
                             <Button Content="Rename Files" Command="{Binding RenameFilesCommand}" Padding="15" FontSize="15" FontWeight="Bold"/>
                         </StackPanel>
                     </Expander>
