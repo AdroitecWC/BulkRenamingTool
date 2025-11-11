@@ -22,6 +22,9 @@ namespace RenaimingToolCS.Helpers
         public string CurrentCommonFilesFolder { get; set; } = string.Empty;
         public string WorkingDirectory { get; set; } = string.Empty;
 
+        // Renaming mode property
+        public string RenamingMode { get; set; } = "Excel"; // Options: "Excel", "Prefix", "Suffix"
+
         // History collections for the dropdowns
         public ObservableCollection<string> CreoPathHistory { get; set; }
         public ObservableCollection<string> ProDirectoryHistory { get; set; }
@@ -99,6 +102,8 @@ namespace RenaimingToolCS.Helpers
                     CurrentVbApiRegisterBatPath = loadedSettings.CurrentVbApiRegisterBatPath;
                     CurrentCommonFilesFolder = loadedSettings.CurrentCommonFilesFolder;
                     WorkingDirectory = loadedSettings.WorkingDirectory;
+
+                    RenamingMode = loadedSettings.RenamingMode ?? "Excel";
 
                     CreoPathHistory = new ObservableCollection<string>(loadedSettings.CreoPathHistory);
                     ProDirectoryHistory = new ObservableCollection<string>(loadedSettings.ProDirectoryHistory);

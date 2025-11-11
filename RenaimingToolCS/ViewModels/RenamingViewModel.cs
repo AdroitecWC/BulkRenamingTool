@@ -28,6 +28,7 @@ namespace RenaimingToolCS.ViewModels
         private string _outputFolderPath;
         private string _excelFilePath;
         private bool _isAllSelected;
+        private string _prefixSuffixTextInput;
 
         public bool IsAllSelected
         {
@@ -83,6 +84,21 @@ namespace RenaimingToolCS.ViewModels
             var settingsWindow = new SettingsWindow();
             settingsWindow.DataContext = new SettingsWindowViewModel();
             settingsWindow.ShowDialog();
+
+            // Refresh all mode-dependent properties after settings window closes
+            RefreshModeSettings();
+        }
+
+        public void RefreshModeSettings()
+        {
+            OnPropertyChanged(nameof(RenamingMode));
+            OnPropertyChanged(nameof(IsExcelMode));
+            OnPropertyChanged(nameof(IsPrefixSuffixMode));
+            OnPropertyChanged(nameof(PrefixSuffixHeaderText));
+            OnPropertyChanged(nameof(PrefixSuffixLabelText));
+
+            // Clear prefix/suffix text when mode changes
+            PrefixSuffixTextInput = string.Empty;
         }
 
 
@@ -182,6 +198,99 @@ namespace RenaimingToolCS.ViewModels
 
         public ObservableCollection<FileModel> Files { get; } = new ObservableCollection<FileModel>();
 
+        // Renaming mode properties
+        public string RenamingMode
+        {
+            get => SettingsManager.Instance.RenamingMode;
+            set
+            {
+                if (SettingsManager.Instance.RenamingMode != value)
+                {
+                    SettingsManager.Instance.RenamingMode = value;
+                    SettingsManager.Instance.Save();
+                    RefreshModeSettings();
+                }
+            }
+        }
+
+        public bool IsExcelMode => RenamingMode == "Excel";
+        public bool IsPrefixSuffixMode => RenamingMode == "Prefix" || RenamingMode == "Suffix";
+
+        public string PrefixSuffixHeaderText => RenamingMode == "Prefix" ? "Enter Prefix" : "Enter Suffix";
+        public string PrefixSuffixLabelText => RenamingMode == "Prefix"
+            ? "Enter text to add before filename:"
+            : "Enter text to add after filename:";
+
+        public string PrefixSuffixTextInput
+        {
+            get => _prefixSuffixTextInput ?? string.Empty;
+            set
+            {
+                if (_prefixSuffixTextInput != value)
+                {
+                    _prefixSuffixTextInput = value;
+                    OnPropertyChanged(nameof(PrefixSuffixTextInput));
+                }
+            }
+        }
+
+        public void ApplyPrefixSuffixToFiles()
+        {
+            if (!IsPrefixSuffixMode || string.IsNullOrEmpty(PrefixSuffixTextInput))
+            {
+                // Clear all NewName values if text is empty
+                if (string.IsNullOrEmpty(PrefixSuffixTextInput))
+                {
+                    foreach (var file in Files)
+                    {
+                        file.NewName = string.Empty;
+                    }
+                }
+                return;
+            }
+
+            foreach (var file in Files)
+            {
+                string fileName = file.OriginalName;
+                string baseName = fileName;
+                string fileExtension = string.Empty;
+                string numericExtension = string.Empty;
+
+                // Check for numeric extension (e.g., .1, .2, .3)
+                string lastExtension = Path.GetExtension(fileName);
+                if (!string.IsNullOrEmpty(lastExtension) && int.TryParse(lastExtension.Substring(1), out _))
+                {
+                    // Has numeric extension like .1, .2
+                    numericExtension = lastExtension;
+                    fileName = Path.GetFileNameWithoutExtension(fileName);
+
+                    // Now get the file type extension (e.g., .prt, .asm)
+                    fileExtension = Path.GetExtension(fileName);
+                    baseName = Path.GetFileNameWithoutExtension(fileName);
+                }
+                else
+                {
+                    // No numeric extension, just regular extension
+                    fileExtension = lastExtension;
+                    baseName = Path.GetFileNameWithoutExtension(fileName);
+                }
+
+                string newName;
+                if (RenamingMode == "Prefix")
+                {
+                    // Prefix goes before everything: prefix + basename + .ext + .number
+                    newName = PrefixSuffixTextInput + baseName + fileExtension + numericExtension;
+                }
+                else // Suffix
+                {
+                    // Suffix goes after basename but before extensions: basename + suffix + .ext + .number
+                    newName = baseName + PrefixSuffixTextInput + fileExtension + numericExtension;
+                }
+
+                file.NewName = newName;
+            }
+        }
+
         private int GetIterationNumber(string filePath)
         {
             string extension = Path.GetExtension(filePath);
@@ -228,6 +337,12 @@ namespace RenaimingToolCS.ViewModels
 
             _isAllSelected = latestFiles.Any();
             OnPropertyChanged(nameof(IsAllSelected));
+
+            // If in prefix/suffix mode, automatically apply the prefix/suffix
+            if (IsPrefixSuffixMode && !string.IsNullOrEmpty(PrefixSuffixTextInput))
+            {
+                ApplyPrefixSuffixToFiles();
+            }
         }
 
         private string CreateMappingKey(string fileName)

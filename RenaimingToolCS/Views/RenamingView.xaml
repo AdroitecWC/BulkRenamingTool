@@ -7,6 +7,8 @@
              d:DesignHeight="800" d:DesignWidth="1200">
 
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
         <Style TargetType="Button">
             <Setter Property="Background" Value="#2F4C7A"/>
             <Setter Property="Foreground" Value="White"/>
@@ -217,21 +219,83 @@
                             </Border>
                         </StackPanel>
                     </Expander>
+
+                    <!-- Renaming Mode Selector -->
+                    <Border BorderBrush="#E0E0E0"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Margin="0,0,20,10"
+                            Padding="12"
+                            Background="White">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Renaming Mode:"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,10,0"
+                                       FontWeight="SemiBold"
+                                       FontSize="14"
+                                       Foreground="#333"/>
+                            <ComboBox x:Name="RenamingModeComboBox"
+                                      SelectedValue="{Binding RenamingMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Tag"
+                                      Width="170"
+                                      VerticalAlignment="Center"
+                                      FontSize="13"
+                                      SelectionChanged="RenamingModeComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Excel Import/Export" Tag="Excel"/>
+                                <ComboBoxItem Content="Prefix" Tag="Prefix"/>
+                                <ComboBoxItem Content="Suffix" Tag="Suffix"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Step 2: Export Excel OR Enter Prefix/Suffix -->
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Border x:Name="ExportStatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
-                                    <TextBlock x:Name="ExportStatusNumber" Text="2" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border x:Name="Step2StatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
+                                    <TextBlock x:Name="Step2StatusNumber" Text="2" FontSize="15" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <TextBlock Text="Export to Excel" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                <TextBlock FontWeight="Bold" FontSize="14" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Export to Excel"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RenamingMode}" Value="Prefix">
+                                                    <Setter Property="Text" Value="Enter Prefix"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding RenamingMode}" Value="Suffix">
+                                                    <Setter Property="Text" Value="Enter Suffix"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Button Content="Export File List" Command="{Binding DownloadExcelCommand}" Padding="10" Click="ExportButton_Click" />
+                            <!-- Excel Export Button - Only visible in Excel mode -->
+                            <Button Content="Export File List"
+                                    Command="{Binding DownloadExcelCommand}"
+                                    Padding="10"
+                                    Click="ExportButton_Click"
+                                    Visibility="{Binding IsExcelMode, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                            <!-- Prefix/Suffix Text Input - Only visible in Prefix or Suffix mode -->
+                            <StackPanel Visibility="{Binding IsPrefixSuffixMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding PrefixSuffixLabelText}" Foreground="#666" Margin="0,0,0,8"/>
+                                <TextBox Text="{Binding PrefixSuffixTextInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="14"
+                                         Padding="8"
+                                         Background="White"
+                                         BorderBrush="#D0D0D0"
+                                         BorderThickness="1"
+                                         TextChanged="PrefixSuffixTextBox_TextChanged"/>
+                            </StackPanel>
                         </StackPanel>
                     </Expander>
 
-                    <Expander IsExpanded="True">
+                    <!-- Step 3: Import Excel - Only visible in Excel mode -->
+                    <Expander IsExpanded="True" Visibility="{Binding IsExcelMode, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
                                 <Border x:Name="ImportStatusCircle" Background="#777" CornerRadius="20" Width="20" Height="20" Margin="0,0,10,0">
@@ -241,7 +305,7 @@
                             </StackPanel>
                         </Expander.Header>
                         <StackPanel>
-                            <Grid AllowDrop="True" Drop="Excel_Drop" PreviewDragOver="Excel_PreviewDragOver"  
+                            <Grid AllowDrop="True" Drop="Excel_Drop" PreviewDragOver="Excel_PreviewDragOver"
                                   MouseLeftButtonDown="ExcelDropZone_MouseLeftButtonDown" Cursor="Hand"
                                   MinHeight="100" Background="#F9F9F9">
                                 <Rectangle Stroke="#D0D0D0" StrokeThickness="1" StrokeDashArray="4 2" RadiusX="8" RadiusY="8"/>
@@ -250,18 +314,19 @@
                                     <TextBlock Text="Drag &amp; drop Excel file here or click" Foreground="#666" Margin="0,10,0,0"/>
                                 </StackPanel>
                             </Grid>
-                            <Border x:Name="SelectedImportPathBorder" 
-                                    BorderBrush="#17B93F" 
-                                    BorderThickness="1" 
-                                    CornerRadius="8" 
-                                    Margin="0,10,0,0" 
-                                    Padding="8" 
+                            <Border x:Name="SelectedImportPathBorder"
+                                    BorderBrush="#17B93F"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Margin="0,10,0,0"
+                                    Padding="8"
                                     Visibility="Collapsed">
                                 <TextBlock x:Name="SelectedImportPathTextBlock" TextWrapping="Wrap" />
                             </Border>
                         </StackPanel>
                     </Expander>
 
+                    <!-- Step 4: Output Destination -->
                     <Expander IsExpanded="True">
                         <Expander.Header>
                             <StackPanel Orientation="Horizontal">
