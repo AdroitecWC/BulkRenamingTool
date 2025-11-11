@@ -19,6 +19,12 @@
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
+        "Entry"
+        {
+        "MsmKey" = "8:_7FFEA22B2CC54A17BB6FDF7812CA3D37"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
     }
     "Configurations"
     {
@@ -37,6 +43,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
         "Release"
         {
@@ -53,6 +67,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
     }
     "Deployable"
@@ -84,6 +106,26 @@
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7FFEA22B2CC54A17BB6FDF7812CA3D37"
+            {
+            "SourcePath" = "8:..\\RenaimingToolCS\\Resources\\logo.ico"
+            "TargetName" = "8:logo.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_9E086180F66048D2B982670142ED7960"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -263,7 +305,7 @@
         {
             "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_1E79F36C910448D0AF20C5AF23CEDB45"
             {
-            "Name" = "8:Rename"
+            "Name" = "8:Bulk Renaming Tool"
             "Arguments" = "8:"
             "Description" = "8:"
             "ShowCmd" = "3:1"
@@ -272,12 +314,12 @@
             "Target" = "8:_2263B1640E9F49D5BF71A72CDA1CD9CF"
             "Folder" = "8:_A295DEE14CC5429E9C99574A04128115"
             "WorkingFolder" = "8:_9E086180F66048D2B982670142ED7960"
-            "Icon" = "8:"
+            "Icon" = "8:_7FFEA22B2CC54A17BB6FDF7812CA3D37"
             "Feature" = "8:"
             }
             "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_5A0333DFB0A944CB93EEA16FEA4285F6"
             {
-            "Name" = "8:Renaming"
+            "Name" = "8:Bulk Renaming Tool"
             "Arguments" = "8:"
             "Description" = "8:"
             "ShowCmd" = "3:1"
@@ -286,7 +328,7 @@
             "Target" = "8:_2263B1640E9F49D5BF71A72CDA1CD9CF"
             "Folder" = "8:_EED03C05B07E422A8F1A3136512329C5"
             "WorkingFolder" = "8:_9E086180F66048D2B982670142ED7960"
-            "Icon" = "8:"
+            "Icon" = "8:_7FFEA22B2CC54A17BB6FDF7812CA3D37"
             "Feature" = "8:"
             }
         }

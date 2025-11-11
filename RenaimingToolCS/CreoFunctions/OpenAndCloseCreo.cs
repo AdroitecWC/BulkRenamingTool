@@ -93,7 +93,7 @@ namespace RenaimingToolCS.CreoFunctions
                     string startPath = System.IO.Path.Combine(myDocsPath, "\\");
                     proE =  SettingsManager.Instance.CurrentCreoPath;
 
-                    System.Diagnostics.Process.Start(proE, startPath);
+                    System.Diagnostics.Process.Start(proePath, startPath);
 
                     System.Threading.Thread.Sleep(10000);
 
