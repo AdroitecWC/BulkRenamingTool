@@ -18,6 +18,27 @@ namespace RenaimingToolCS.Views
             InitializeComponent();
             this.DataContext = new RenamingViewModel();
             ApplyLightTheme();
+            InitializeRenamingMode();
+        }
+
+        private void InitializeRenamingMode()
+        {
+            // Set the ComboBox to match the current mode from settings
+            string currentMode = RenaimingToolCS.Helpers.SettingsManager.Instance.RenamingMode;
+            foreach (ComboBoxItem item in RenamingModeComboBox.Items)
+            {
+                if (item.Tag.ToString() == currentMode)
+                {
+                    RenamingModeComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+        }
+
+        private void RenamingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // The data binding and property setter will handle the mode change
+            // This event is kept for any additional UI-specific logic if needed
         }
 
         private void HelpButton_Click(object sender, RoutedEventArgs e)
@@ -27,7 +48,8 @@ namespace RenaimingToolCS.Views
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("This is where the settings window will open.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            // Refresh the mode ComboBox after settings window closes
+            InitializeRenamingMode();
         }
         // --- Drag and Drop Events ---
         private void InputFolder_PreviewDragOver(object sender, DragEventArgs e)
@@ -65,7 +87,7 @@ namespace RenaimingToolCS.Views
         private void UpdateExportStatus()
         {
             // Change the circle's background to green and keep the number visible
-            ExportStatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
+            Step2StatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
         }
 
         private void UpdateImportStatus(string selectedPath)
@@ -168,6 +190,25 @@ namespace RenaimingToolCS.Views
             {
                 vm.BrowseOutputFolderCommand.Execute(null);
                 UpdateOutputStatus(vm.OutputFolderPath); // <-- Add this
+            }
+        }
+
+        private void PrefixSuffixTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (DataContext is RenamingViewModel vm)
+            {
+                vm.ApplyPrefixSuffixToFiles();
+
+                // Update Step 2 status circle to green when text is entered
+                if (!string.IsNullOrEmpty(vm.PrefixSuffixTextInput))
+                {
+                    Step2StatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17B93F"));
+                }
+                else
+                {
+                    // Reset to gray if text is empty
+                    Step2StatusCircle.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#777"));
+                }
             }
         }
 

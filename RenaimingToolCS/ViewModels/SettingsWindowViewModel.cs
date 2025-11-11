@@ -51,6 +51,13 @@ namespace RenaimingToolCS.ViewModels
             set => SetProperty(ref _currentCommonFilesFolder, value);
         }
 
+        private string _renamingMode;
+        public string RenamingMode
+        {
+            get => _renamingMode;
+            set => SetProperty(ref _renamingMode, value);
+        }
+
         // History collections bound to the ComboBox's ItemsSource
         public ObservableCollection<string> CreoPathHistory { get; }
         public ObservableCollection<string> ProDirectoryHistory { get; }
@@ -87,6 +94,8 @@ namespace RenaimingToolCS.ViewModels
 
             CurrentCommonFilesFolder = SettingsManager.Instance.CurrentCommonFilesFolder;
             CommonFilesFolderHistory = SettingsManager.Instance.CommonFilesFolderHistory;
+
+            RenamingMode = SettingsManager.Instance.RenamingMode;
 
             // Initialize commands
             BrowseCreoPathCommand = new RelayCommand(BrowseForCreoPath);
@@ -160,60 +169,59 @@ namespace RenaimingToolCS.ViewModels
         {
             try
             {
-                // Show message box and get user response
-                var result = MessageBox.Show(
-                    "Do you want to close Creo processes before saving settings?",
-                    "Info",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Information);
+                // Update renaming mode (independent of Creo paths)
+                SettingsManager.Instance.RenamingMode = RenamingMode;
 
-                if (result == MessageBoxResult.Yes)
-                {
-                    // User clicked Yes -> close Creo processes
-                    closeCreo();
-                }
-                else if (result == MessageBoxResult.No)
-                {
-                    // User clicked No -> skip closing Creo, proceed to save settings
-                    return;
-                }
-                
-
-                // Proceed with saving settings after user's decision
-
-                // 1. Update the 'Current' path properties in the SettingsManager
+                // Update the 'Current' path properties in the SettingsManager
                 SettingsManager.Instance.CurrentCreoPath = CurrentCreoPath;
                 SettingsManager.Instance.CurrentProDirectory = CurrentProDirectory;
                 SettingsManager.Instance.CurrentProCommMsgExe = CurrentProCommMsgExe;
                 SettingsManager.Instance.CurrentVbApiRegisterBatPath = CurrentVbApiRegisterBatPath;
                 SettingsManager.Instance.CurrentCommonFilesFolder = CurrentCommonFilesFolder;
 
-                // 2. Add the current values to their respective history lists
+                // Add the current values to their respective history lists
                 SettingsManager.Instance.AddPathToHistory(CurrentCreoPath, CreoPathHistory);
                 SettingsManager.Instance.AddPathToHistory(CurrentProDirectory, ProDirectoryHistory);
                 SettingsManager.Instance.AddPathToHistory(CurrentProCommMsgExe, ProCommMsgExeHistory);
                 SettingsManager.Instance.AddPathToHistory(CurrentVbApiRegisterBatPath, VbApiRegisterBatPathHistory);
                 SettingsManager.Instance.AddPathToHistory(CurrentCommonFilesFolder, CommonFilesFolderHistory);
 
-                // 3. Persist all changes to the settings file
+                // Persist all changes to the settings file
                 SettingsManager.Instance.Save();
 
-                // 4. Run the batch file creation logic (if still needed)
-                var bat = new CreateAndRunBatchFile
+                // Only run batch file creation if Creo paths are configured
+                if (!string.IsNullOrEmpty(CurrentCreoPath) && !string.IsNullOrEmpty(CurrentProDirectory))
                 {
-                    CreoPath = SettingsManager.Instance.CurrentCreoPath,
-                    ProDirectory = SettingsManager.Instance.CurrentProDirectory,
-                    ProCommMsgExe = SettingsManager.Instance.CurrentProCommMsgExe,
-                    VbApiRegisterBatPath = SettingsManager.Instance.CurrentVbApiRegisterBatPath
-                };
-                bat.CreateAndRunBatchFileMethod();
+                    // Show message box and get user response
+                    var result = MessageBox.Show(
+                        "Do you want to close Creo processes before saving settings?",
+                        "Info",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
 
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // User clicked Yes -> close Creo processes
+                        closeCreo();
+                    }
+
+                    // Run the batch file creation logic
+                    var bat = new CreateAndRunBatchFile
+                    {
+                        CreoPath = SettingsManager.Instance.CurrentCreoPath,
+                        ProDirectory = SettingsManager.Instance.CurrentProDirectory,
+                        ProCommMsgExe = SettingsManager.Instance.CurrentProCommMsgExe,
+                        VbApiRegisterBatPath = SettingsManager.Instance.CurrentVbApiRegisterBatPath
+                    };
+                    //bat.CreateAndRunBatchFileMethod();
+                }
+
+                MessageBox.Show("Settings saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 Console.WriteLine("Settings saved.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error closing Creo processes: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                MessageBox.Show($"Error saving settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

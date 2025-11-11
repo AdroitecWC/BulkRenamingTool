@@ -8,6 +8,8 @@
         Title="SettingsWindow" Height="650" Width="800">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
         <Style TargetType="ToolTip">
             <Setter Property="Background" Value="#333"/>
             <Setter Property="Foreground" Value="White"/>
@@ -25,23 +27,17 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0"
-                   Text="Configure Creo Paths"
+                   Text="Renaming Settings"
                    FontSize="20"
                    FontWeight="Bold"
                    Foreground="#2c3e50"
                    Margin="0,0,0,20"/>
+
+        <!--
+        COMMENTED OUT: Creo Path Settings
 
         <TextBlock Grid.Row="1"
                    Text="Full path to parametric.exe:"
@@ -257,8 +253,33 @@
                 </Button.ToolTip>
             </Button>
         </Grid>
+        -->
 
-        <StackPanel Grid.Row="12"
+        <!-- Renaming Mode Section -->
+        <TextBlock Grid.Row="1"
+                   Text="Renaming Mode:"
+                   FontWeight="SemiBold"
+                   Margin="0,0,0,8"
+                   Foreground="#333"/>
+
+        <ComboBox Grid.Row="2"
+                  SelectedValue="{Binding RenamingMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                  SelectedValuePath="Tag"
+                  FontSize="14"
+                  Padding="6"
+                  Margin="0,0,0,20"
+                  Background="White"
+                  BorderBrush="#ccc"
+                  BorderThickness="1">
+            <ComboBoxItem Content="Excel Import/Export" Tag="Excel"/>
+            <ComboBoxItem Content="Prefix" Tag="Prefix"/>
+            <ComboBoxItem Content="Suffix" Tag="Suffix"/>
+            <ComboBox.ToolTip>
+                Select how you want to rename files: Excel (import/export), Prefix (add text before filename), or Suffix (add text after filename).
+            </ComboBox.ToolTip>
+        </ComboBox>
+
+        <StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,10,0,0">
