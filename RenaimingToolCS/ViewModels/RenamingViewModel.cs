@@ -417,7 +417,6 @@ namespace RenaimingToolCS.ViewModels
 
                 if (!string.IsNullOrWhiteSpace(OutputFolderPath))
                 {
-                    // Folder Safety Check region... (This code is correct and remains unchanged)
                     #region Folder Safety Check
                     try
                     {
@@ -463,16 +462,18 @@ namespace RenaimingToolCS.ViewModels
                 progressForm.Show();
                 CreoFileHelper.PurgeFolder(folderPath);
                 CreoSessionManager.Instance.InitializeCreoSession();
-                //CloseBrowser();
                 var session = CreoSessionManager.Instance.Session;
                 var baseSession = (IpfcBaseSession)session;
                 session.EraseUndisplayedModels();
                 CreoFileHelper.OpenAllCreoModelsInFolder(folderPath);
 
                 var loadedModels = baseSession.ListModels();
-                int total = loadedModels.Count;
+                int totalModels = loadedModels.Count;
+                int totalFiles = Files.Count;
+                int total = Math.Max(totalModels, totalFiles); // total steps for progress
 
-                for (int i = 0; i < total; i++)
+                // --- First rename Creo models ---
+                for (int i = 0; i < totalModels; i++)
                 {
                     var model = loadedModels[i];
                     string modelOriginalFullName = CreateMappingKey(model.FileName);
@@ -481,32 +482,54 @@ namespace RenaimingToolCS.ViewModels
 
                     if (renameMap.TryGetValue(modelOriginalFullName, out var newName))
                     {
-                        // --- ADDED --- Store the original name before it changes.
                         string originalInstanceName = model.InstanceName;
-                        //for custom names
-                        //string confirmedNewName = ShowRenameConfirmationPopup(originalInstanceName, newName);
+                        string confirmedNewName = ShowRenameConfirmationPopup(originalInstanceName, newName);
+                        if (confirmedNewName == null) continue;
+
                         try
                         {
-                            //model.Display();
-
-                            model.Rename(newName, true);
-                            //model.Rename(confirmedNewName, true);
+                            model.Rename(confirmedNewName, true);
                             model.Save();
                             renamedCount++;
-
-                            // --- CORRECTED --- Use the stored original name for logging.
-                            progressForm.UpdateProgress(percent, $"Renamed ({currentIndex}/{total}): '{originalInstanceName}' to '{newName}'");
-                            renamedModels.AppendLine($"SUCCESS: Renamed '{originalInstanceName}' to '{newName}'");
+                            progressForm.UpdateProgress(percent, $"Renamed ({currentIndex}/{total}): '{originalInstanceName}' to '{confirmedNewName}'");
+                            renamedModels.AppendLine($"SUCCESS: Renamed '{originalInstanceName}' to '{confirmedNewName}'");
                         }
                         catch (Exception ex)
                         {
-                            // --- CORRECTED --- Use the stored original name for logging.
-                            errorMessages.AppendLine($"FAILED to rename '{originalInstanceName}' to '{newName}': {ex.Message}");
+                            errorMessages.AppendLine($"FAILED to rename '{originalInstanceName}' to '{confirmedNewName}': {ex.Message}");
                         }
                     }
                 }
 
-                // --- Log Generation and Final Message (Unchanged) ---
+                // --- Now rename non-Creo files ---
+                var nonCreoFiles = Files.Where(f => f.IsSelected && !CreoFileHelper.IsCreoFile(f.FullPath)).ToList();
+                for (int i = 0; i < nonCreoFiles.Count; i++)
+                {
+                    var file = nonCreoFiles[i];
+                    int currentIndex = i + 1 + totalModels;
+                    int percent = (int)(currentIndex * 100.0 / total);
+
+                    if (!string.IsNullOrWhiteSpace(file.NewName))
+                    {
+                        string confirmedNewName = ShowRenameConfirmationPopup(file.OriginalName, file.NewName);
+                        if (confirmedNewName == null) continue;
+
+                        try
+                        {
+                            string newFullPath = Path.Combine(Path.GetDirectoryName(file.FullPath), confirmedNewName + Path.GetExtension(file.FullPath));
+                            File.Move(file.FullPath, newFullPath);
+                            renamedCount++;
+                            progressForm.UpdateProgress(percent, $"Renamed ({currentIndex}/{total}): '{file.OriginalName}' to '{confirmedNewName}'");
+                            renamedModels.AppendLine($"SUCCESS: Renamed '{file.OriginalName}' to '{confirmedNewName}'");
+                        }
+                        catch (Exception ex)
+                        {
+                            errorMessages.AppendLine($"FAILED to rename '{file.OriginalName}' to '{file.NewName}': {ex.Message}");
+                        }
+                    }
+                }
+
+                // --- Generate log ---
                 var finalLog = new StringBuilder();
                 finalLog.AppendLine($"Rename process completed at: {DateTime.Now}");
                 finalLog.AppendLine($"Total files renamed: {renamedCount}");
