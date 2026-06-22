@@ -16,23 +16,24 @@ namespace RenaimingToolCS.Views
         public LicenseWindow()
         {
             InitializeComponent();
+
             txtSystemName.Text = Environment.MachineName;
             txtRequestCode.Text = requestCode;
 
-            // Show expiry date if already licensed
             if (LicenseManager.CheckLicense())
             {
-                var licPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Resources\License\License.lic");
+                string licPath = LicenseManager.GetLicensePath();
+
                 if (File.Exists(licPath))
                 {
                     try
                     {
-                        using (var reader = new StreamReader(licPath))
+                        using (StreamReader reader = new StreamReader(licPath))
                         {
-                            var line = reader.ReadLine();
-                            if (!string.IsNullOrEmpty(line) && line.StartsWith("LastDate:"))
+                            string line = reader.ReadLine();
+                            if (line != null && line.StartsWith("LastDate:"))
                             {
-                                var expDate = line.Replace("LastDate:", "").Trim();
+                                string expDate = line.Replace("LastDate:", "").Trim();
                                 lblExpiry.Text = $"License valid until {expDate}";
                                 lblExpiry.Visibility = Visibility.Visible;
                             }
@@ -40,7 +41,7 @@ namespace RenaimingToolCS.Views
                     }
                     catch
                     {
-                        // Ignore read errors
+                        // intentionally ignored (same as VB)
                     }
                 }
             }
@@ -48,7 +49,7 @@ namespace RenaimingToolCS.Views
 
         private void btnBrowse_Click(object sender, RoutedEventArgs e)
         {
-            var ofd = new OpenFileDialog
+            OpenFileDialog ofd = new OpenFileDialog
             {
                 Filter = "License Files (*.lic)|*.lic"
             };
@@ -61,33 +62,48 @@ namespace RenaimingToolCS.Views
 
         private void btnActivate_Click(object sender, RoutedEventArgs e)
         {
-            var selectedFile = txtFilePath.Text.Trim();
+            string selectedFile = txtFilePath.Text.Trim();
+
             if (!File.Exists(selectedFile))
             {
-                MessageBox.Show("License file not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("License file not found.", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             try
             {
-                var targetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Resources\License\License.lic");
-                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                string targetPath = LicenseManager.GetLicensePath();
+
+                // Copy license to app location
                 File.Copy(selectedFile, targetPath, true);
 
+                // 🔑 ACTIVATE FIRST
+                if (!LicenseManager.ActivateLicense())
+                {
+                    MessageBox.Show("License activation failed.", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Optional safety check
                 if (LicenseManager.CheckLicense())
                 {
-                    MessageBox.Show("License Activated!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("License Activated!", "Success",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
                     DialogResult = true;
                     Close();
                 }
                 else
                 {
-                    MessageBox.Show("Invalid license file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("License activation verification failed.", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Activation failed: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Activation failed: " + ex.Message,
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

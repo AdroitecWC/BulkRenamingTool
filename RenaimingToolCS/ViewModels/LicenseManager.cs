@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -9,54 +10,77 @@ namespace RenaimingToolCS.ViewModels
 {
     public static class LicenseManager
     {
-        private const string LicfilePwd = "Kbe@Adr";
-        private const string LicenseFilePath = @"Resources\License\License.lic";
-        private const string RegPath = @"Software\MyCompany\MyTool";
+        public enum LicenseError
+        {
+            None,
+            LicenseFileMissing,
+            NotActivated,
+            Expired,
+            LicenseTransferred,
+            MachineMismatch,
+            LicenseTampered,
+            CryptoError
+        }
 
+        private const string LicfilePwd = "Kbe@Adr";
+        private const string UsedLicensesRegPath = @"Software\MyCompany\MyTool\UsedLicenses";
+
+        // =====================================================
+        // LICENSE STORAGE LOCATION
+        // =====================================================
+        public static string GetLicensePath()
+        {
+            string basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string folder = Path.Combine(basePath, "MyCompany", "RenamingTool", "License");
+
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            return Path.Combine(folder, "License.lic");
+        }
+
+        // =====================================================
+        // CHECK LICENSE
+        // =====================================================
         public static bool CheckLicense()
         {
-            var fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LicenseFilePath);
-            var tempPath = Path.Combine(Path.GetTempPath(), "TempLicCheck.txt");
+            string fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return false;
 
-            if (!File.Exists(fullPath))
-                return false;
+            string tempPath = Path.GetTempFileName();
 
-            // Decrypt License.lic
-            var key = CreateKey(LicfilePwd);
-            var iv = CreateIV(LicfilePwd);
             try
             {
-                EncryptOrDecryptFile(fullPath, tempPath, key, iv, CryptoAction.ActionDecrypt);
-            }
-            catch
-            {
-                return false;
-            }
+                Decrypt(fullPath, tempPath);
+                var data = ReadLicense(tempPath);
 
-            // Read decrypted license
-            try
-            {
-                using (var reader = new StreamReader(tempPath))
+                if (!data.ContainsKey("Activated") || data["Activated"] != "True")
+                    return false;
+
+                if (data.ContainsKey("LastDate") && data["LastDate"] != "Nil")
                 {
-                    var expiry = reader.ReadLine()?.Replace("LastDate:", "").Trim();
-                    if (!string.Equals(expiry, "Nil", StringComparison.OrdinalIgnoreCase) &&
-                        DateTime.TryParse(expiry, out var expiryDate))
-                    {
-                        if (expiryDate < DateTime.Today)
-                            return false;
-                    }
+                    if (DateTime.TryParse(data["LastDate"], out DateTime exp) &&
+                        exp < DateTime.Today)
+                        return false;
+                }
 
-                    // Validate request code
-                    var expectedCode = GenerateLicenseCode();
-                    foreach (char ch in expectedCode)
-                    {
-                        if (reader.EndOfStream)
-                            return false;
+                string currentSystemCode = GenerateLicenseCode();
 
-                        var val = reader.ReadLine();
-                        if (!int.TryParse(val, out int intVal) || intVal != (int)ch)
-                            return false;
-                    }
+                if (data.ContainsKey("LicenseUid") &&
+                    IsLicenseUsed("TRANSFERRED_LIC_" + data["LicenseUid"]))
+                    return false;
+
+                if (!data.ContainsKey("LicenseId") || data["LicenseId"] != currentSystemCode)
+                    return false;
+
+                for (int i = 0; i < currentSystemCode.Length; i++)
+                {
+                    string key = $"C{i}";
+                    if (!data.ContainsKey(key) ||
+                        (int)currentSystemCode[i] != int.Parse(data[key]))
+                        return false;
                 }
 
                 return true;
@@ -65,84 +89,253 @@ namespace RenaimingToolCS.ViewModels
             {
                 return false;
             }
+            finally
+            {
+                try { File.Delete(tempPath); } catch { }
+            }
         }
 
-        public static string GenerateLicenseCode()
+        // =====================================================
+        // ACTIVATE LICENSE
+        // =====================================================
+        public static bool ActivateLicense()
         {
-            return GetSystemInfo();
-        }
+            string fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return false;
 
-        private static string GetSystemInfo()
-        {
-            var info = new StringBuilder();
-            info.Append(GetWMI("Win32_Processor", "ProcessorId"));
-            info.Append(GetWMI("Win32_BaseBoard", "Product"));
-            info.Append(GetWMI("Win32_DiskDrive", "Signature"));
-            info.Append(GetWMI("Win32_BIOS", "Version"));
+            string tempPath = Path.GetTempFileName();
 
-            return new string(info.ToString().Where(char.IsLetterOrDigit).ToArray());
-        }
-
-        private static string GetWMI(string className, string propertyName)
-        {
             try
             {
-                var searcher = new ManagementObjectSearcher($"SELECT * FROM {className}");
-                foreach (var obj in searcher.Get())
-                {
-                    var value = obj[propertyName];
-                    if (value != null)
-                        return value.ToString();
-                }
+                Decrypt(fullPath, tempPath);
+                var data = ReadLicense(tempPath);
+
+                string currentSystemCode = GenerateLicenseCode();
+
+                if (data.ContainsKey("LicenseUid") &&
+                    IsLicenseUsed("TRANSFERRED_LIC_" + data["LicenseUid"]))
+                    return false;
+
+                if (!data.ContainsKey("LicenseId") || data["LicenseId"] != currentSystemCode)
+                    return false;
+
+                data["Activated"] = "True";
+                data["Transferred"] = "False";
+
+                WriteLicense(tempPath, data);
+                Encrypt(tempPath, fullPath);
+
+                return true;
             }
             catch
             {
-                // Ignore WMI errors
+                return false;
             }
+            finally
+            {
+                try { File.Delete(tempPath); } catch { }
+            }
+        }
+
+        // =====================================================
+        // DEACTIVATE LICENSE
+        // =====================================================
+        public static bool DeactivateLicense()
+        {
+            string fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return false;
+
+            string tempPath = Path.GetTempFileName();
+
+            try
+            {
+                Decrypt(fullPath, tempPath);
+                var data = ReadLicense(tempPath);
+
+                data["Activated"] = "False";
+
+                WriteLicense(tempPath, data);
+                Encrypt(tempPath, fullPath);
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                try { File.Delete(tempPath); } catch { }
+            }
+        }
+
+        // =====================================================
+        // TRANSFER LICENSE
+        // =====================================================
+        public static bool TransferLicense(string newSystemCode, string savePath)
+        {
+            string fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return false;
+
+            string tempPath = Path.GetTempFileName();
+
+            try
+            {
+                Decrypt(fullPath, tempPath);
+                var data = ReadLicense(tempPath);
+
+                if (data.ContainsKey("Transferred") && data["Transferred"] == "True")
+                    return false;
+
+                data["Activated"] = "False";
+                data["Transferred"] = "True";
+
+                WriteLicense(tempPath, data);
+                Encrypt(tempPath, fullPath);
+
+                MarkLicenseUsed("TRANSFERRED_LIC_" + data["LicenseUid"]);
+
+                var newData = new Dictionary<string, string>(data);
+
+                newData["LicenseId"] = newSystemCode;
+                newData["Activated"] = "True";
+                newData["Transferred"] = "False";
+
+                foreach (var key in newData.Keys.Where(k => k.StartsWith("C")).ToList())
+                {
+                    newData.Remove(key);
+                }
+
+                for (int i = 0; i < newSystemCode.Length; i++)
+                {
+                    newData[$"C{i}"] = ((int)newSystemCode[i]).ToString();
+                }
+
+                WriteLicense(tempPath, newData);
+                Encrypt(tempPath, savePath);
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                try { File.Delete(tempPath); } catch { }
+            }
+        }
+
+        // =====================================================
+        // FILE IO
+        // =====================================================
+        private static Dictionary<string, string> ReadLicense(string path)
+        {
+            var dict = new Dictionary<string, string>();
+
+            foreach (var line in File.ReadAllLines(path))
+            {
+                if (line.Contains(":"))
+                {
+                    var p = line.Split(new[] { ':' }, 2);
+                    dict[p[0].Trim()] = p[1].Trim();
+                }
+            }
+
+            return dict;
+        }
+
+        private static void WriteLicense(string path, Dictionary<string, string> data)
+        {
+            using (var w = new StreamWriter(path, false))
+            {
+                foreach (var kv in data)
+                {
+                    w.WriteLine($"{kv.Key}:{kv.Value}");
+                }
+            }
+        }
+
+        // =====================================================
+        // REGISTRY
+        // =====================================================
+        private static bool IsLicenseUsed(string id)
+        {
+            using (var k = Registry.CurrentUser.OpenSubKey(UsedLicensesRegPath))
+            {
+                return k != null && k.GetValue(id) != null;
+            }
+        }
+
+        private static void MarkLicenseUsed(string id)
+        {
+            using (var k = Registry.CurrentUser.CreateSubKey(UsedLicensesRegPath))
+            {
+                k.SetValue(id, DateTime.Now.ToString("s"));
+            }
+        }
+
+        // =====================================================
+        // MACHINE CODE
+        // =====================================================
+        public static string GenerateLicenseCode()
+        {
+            string raw =
+                GetWMI("Win32_Processor", "ProcessorId") +
+                GetWMI("Win32_BaseBoard", "Product") +
+                GetWMI("Win32_DiskDrive", "Signature") +
+                GetWMI("Win32_BIOS", "Version");
+
+            return new string(raw.Where(char.IsLetterOrDigit).ToArray());
+        }
+
+        private static string GetWMI(string cls, string prop)
+        {
+            try
+            {
+                foreach (ManagementObject o in new ManagementObjectSearcher($"SELECT * FROM {cls}").Get())
+                {
+                    if (o[prop] != null)
+                        return o[prop].ToString();
+                }
+            }
+            catch { }
 
             return "";
         }
 
-        public enum CryptoAction
+        // =====================================================
+        // CRYPTO
+        // =====================================================
+        private static void Encrypt(string input, string output)
         {
-            ActionEncrypt = 1,
-            ActionDecrypt = 2
+            Crypto(input, output, true);
         }
 
-        public static byte[] CreateKey(string password)
+        private static void Decrypt(string input, string output)
         {
-            using var sha = new SHA512Managed();
-            var hash = sha.ComputeHash(Encoding.ASCII.GetBytes(password));
-            return hash.Take(32).ToArray(); // AES-256
+            Crypto(input, output, false);
         }
 
-        public static byte[] CreateIV(string password)
+        private static void Crypto(string input, string output, bool encrypt)
         {
-            using var sha = new SHA512Managed();
-            var hash = sha.ComputeHash(Encoding.ASCII.GetBytes(password));
-            return hash.Skip(32).Take(16).ToArray(); // AES block size = 16 bytes
-        }
+            byte[] key = SHA512.Create().ComputeHash(Encoding.UTF8.GetBytes(LicfilePwd));
 
-        public static void EncryptOrDecryptFile(string inputPath, string outputPath, byte[] key, byte[] iv, CryptoAction direction)
-        {
-            using var fsInput = new FileStream(inputPath, FileMode.Open, FileAccess.Read);
-            using var fsOutput = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            using var csp = new RijndaelManaged();
-
-            CryptoStream cs;
-            if (direction == CryptoAction.ActionEncrypt)
-                cs = new CryptoStream(fsOutput, csp.CreateEncryptor(key, iv), CryptoStreamMode.Write);
-            else
-                cs = new CryptoStream(fsOutput, csp.CreateDecryptor(key, iv), CryptoStreamMode.Write);
-
-            var buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = fsInput.Read(buffer, 0, buffer.Length)) > 0)
+            using (var aes = new RijndaelManaged())
             {
-                cs.Write(buffer, 0, bytesRead);
-            }
+                aes.Key = key.Take(32).ToArray();
+                aes.IV = key.Skip(32).Take(16).ToArray();
 
-            cs.Close();
+                using (var fsIn = new FileStream(input, FileMode.Open))
+                using (var fsOut = new FileStream(output, FileMode.Create))
+                using (var cs = new CryptoStream(
+                    fsOut,
+                    encrypt ? aes.CreateEncryptor() : aes.CreateDecryptor(),
+                    CryptoStreamMode.Write))
+                {
+                    fsIn.CopyTo(cs);
+                }
+            }
         }
     }
 }

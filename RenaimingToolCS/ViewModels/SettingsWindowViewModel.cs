@@ -2,6 +2,7 @@
 using Ookii.Dialogs.Wpf;
 using RenaimingToolCS.CreoFunctions;
 using RenaimingToolCS.Helpers;
+using RenaimingToolCS.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -57,7 +58,46 @@ namespace RenaimingToolCS.ViewModels
             get => _renamingMode;
             set => SetProperty(ref _renamingMode, value);
         }
+        private bool _isDeactivateSelected = true;
+        public bool IsDeactivateSelected
+        {
+            get => _isDeactivateSelected;
+            set
+            {
+                if (SetProperty(ref _isDeactivateSelected, value))
+                {
+                    if (value)
+                    {
+                        _isTransferSelected = false;
+                        OnPropertyChanged(nameof(IsTransferSelected));
+                    }
 
+                    OnPropertyChanged(nameof(PrimaryLicenseActionText));
+                }
+            }
+        }
+
+        private bool _isTransferSelected;
+        public bool IsTransferSelected
+        {
+            get => _isTransferSelected;
+            set
+            {
+                if (SetProperty(ref _isTransferSelected, value))
+                {
+                    if (value)
+                    {
+                        _isDeactivateSelected = false;
+                        OnPropertyChanged(nameof(IsDeactivateSelected));
+                    }
+
+                    OnPropertyChanged(nameof(PrimaryLicenseActionText));
+                }
+            }
+        }
+
+        public string PrimaryLicenseActionText =>
+            IsTransferSelected ? "Transfer License" : "Deactivate License";
         // History collections bound to the ComboBox's ItemsSource
         public ObservableCollection<string> CreoPathHistory { get; }
         public ObservableCollection<string> ProDirectoryHistory { get; }
@@ -67,45 +107,26 @@ namespace RenaimingToolCS.ViewModels
         #endregion
 
         #region Commands
-        public ICommand BrowseCreoPathCommand { get; }
-        public ICommand BrowseProDirectoryCommand { get; }
-        public ICommand BrowseProCommMsgExeCommand { get; }
-        public ICommand BrowseVbApiRegisterBatCommand { get; }
-        public ICommand BrowseCommonFilesFolderCommand { get; }
+      
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand ConfirmCommand { get; }
+        public ICommand PrimaryLicenseActionCommand { get; }
         #endregion
 
         public SettingsWindowViewModel()
         {
             // Load current values and history from SettingsManager
-            CurrentCreoPath = SettingsManager.Instance.CurrentCreoPath;
-            CreoPathHistory = SettingsManager.Instance.CreoPathHistory;
-
-            CurrentProDirectory = SettingsManager.Instance.CurrentProDirectory;
-            ProDirectoryHistory = SettingsManager.Instance.ProDirectoryHistory;
-
-            CurrentProCommMsgExe = SettingsManager.Instance.CurrentProCommMsgExe;
-            ProCommMsgExeHistory = SettingsManager.Instance.ProCommMsgExeHistory;
-
-            CurrentVbApiRegisterBatPath = SettingsManager.Instance.CurrentVbApiRegisterBatPath;
-            VbApiRegisterBatPathHistory = SettingsManager.Instance.VbApiRegisterBatPathHistory;
-
-            CurrentCommonFilesFolder = SettingsManager.Instance.CurrentCommonFilesFolder;
-            CommonFilesFolderHistory = SettingsManager.Instance.CommonFilesFolderHistory;
+           
 
             RenamingMode = SettingsManager.Instance.RenamingMode;
 
             // Initialize commands
-            BrowseCreoPathCommand = new RelayCommand(BrowseForCreoPath);
-            BrowseProDirectoryCommand = new RelayCommand(BrowseForProDirectory);
-            BrowseProCommMsgExeCommand = new RelayCommand(BrowseForProCommMsgExe);
-            BrowseVbApiRegisterBatCommand = new RelayCommand(BrowseForVbApiRegisterBat);
-            BrowseCommonFilesFolderCommand = new RelayCommand(BrowseForCommonFilesFolder);
+           
 
             SaveCommand = new RelayCommand(OnSave);
             CancelCommand = new RelayCommand(OnCancel);
+            PrimaryLicenseActionCommand = new RelayCommand(ExecutePrimaryLicenseAction);
             ConfirmCommand = new RelayCommand(OnConfirm);
         }
 
@@ -114,27 +135,14 @@ namespace RenaimingToolCS.ViewModels
             SaveSettings();
             // Do not close window
         }
-
-        private void OnConfirm()
-        {
-            // Confirm restart with user
-            var result = MessageBox.Show("Do you want to restart the application to apply the new settings?",
-                                         "Confirm Restart", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-
-
-
-                var res = new RenamingViewModel();
-                    res.RestartApplication();
-            }
-        }
-
-       
         private void OnCancel()
         {
             // Discard changes and close
+            RequestClose?.Invoke();
+        }
+        private void OnConfirm()
+        {
+           
             RequestClose?.Invoke();
         }
         private void closeCreo()
@@ -169,22 +177,7 @@ namespace RenaimingToolCS.ViewModels
         {
             try
             {
-                // Update renaming mode (independent of Creo paths)
-                SettingsManager.Instance.RenamingMode = RenamingMode;
-
-                // Update the 'Current' path properties in the SettingsManager
-                SettingsManager.Instance.CurrentCreoPath = CurrentCreoPath;
-                SettingsManager.Instance.CurrentProDirectory = CurrentProDirectory;
-                SettingsManager.Instance.CurrentProCommMsgExe = CurrentProCommMsgExe;
-                SettingsManager.Instance.CurrentVbApiRegisterBatPath = CurrentVbApiRegisterBatPath;
-                SettingsManager.Instance.CurrentCommonFilesFolder = CurrentCommonFilesFolder;
-
-                // Add the current values to their respective history lists
-                SettingsManager.Instance.AddPathToHistory(CurrentCreoPath, CreoPathHistory);
-                SettingsManager.Instance.AddPathToHistory(CurrentProDirectory, ProDirectoryHistory);
-                SettingsManager.Instance.AddPathToHistory(CurrentProCommMsgExe, ProCommMsgExeHistory);
-                SettingsManager.Instance.AddPathToHistory(CurrentVbApiRegisterBatPath, VbApiRegisterBatPathHistory);
-                SettingsManager.Instance.AddPathToHistory(CurrentCommonFilesFolder, CommonFilesFolderHistory);
+         
 
                 // Persist all changes to the settings file
                 SettingsManager.Instance.Save();
@@ -226,68 +219,92 @@ namespace RenaimingToolCS.ViewModels
         }
 
         #region Browse Dialogs
-        private void BrowseForCreoPath()
+     
+        private void DeactivateLicense()
         {
-            var dialog = new OpenFileDialog
+            if (!IsDeactivateSelected)
             {
-                Filter = "Creo Executable (parametric.exe)|parametric.exe",
-                Title = "Select parametric.exe"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                CurrentCreoPath = dialog.FileName;
+                MessageBox.Show(
+                    "Please select 'Deactivate License' option to proceed.",
+                    "Action Not Selected",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
             }
-        }
 
-        private void BrowseForProDirectory()
-        {
-            var dialog = new VistaFolderBrowserDialog
-            {
-                Description = "Select the Parametric folder (PRO_DIRECTORY)"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                CurrentProDirectory = dialog.SelectedPath;
-            }
-        }
+            var result = MessageBox.Show(
+                "This will permanently deactivate the license and close the application.\n\n" +
+                "You will need a new license to continue using the software.\n\n" +
+                "Do you want to continue?",
+                "Deactivate License",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
 
-        private void BrowseForProCommMsgExe()
-        {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "Executable (pro_comm_msg.exe)|pro_comm_msg.exe",
-                Title = "Select pro_comm_msg.exe"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                CurrentProCommMsgExe = dialog.FileName;
-            }
-        }
+            if (result != MessageBoxResult.Yes)
+                return;
 
-        private void BrowseForVbApiRegisterBat()
-        {
-            var dialog = new OpenFileDialog
+            if (LicenseManager.DeactivateLicense())
             {
-                Filter = "Batch File (vb_api_register.bat)|vb_api_register.bat",
-                Title = "Select vb_api_register.bat"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                CurrentVbApiRegisterBatPath = dialog.FileName;
-            }
-        }
+                MessageBox.Show(
+                    "License deactivated successfully. The application will now close.",
+                    "License Deactivated",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
 
-        private void BrowseForCommonFilesFolder()
-        {
-            var dialog = new VistaFolderBrowserDialog
+                Application.Current.Shutdown(); // 👈 matches your app flow
+            }
+            else
             {
-                Description = "Select the Common Files folder"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                CurrentCommonFilesFolder = dialog.SelectedPath;
+                MessageBox.Show(
+                    "License deactivation failed or no active license found.",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
+        private void TransferLicense()
+        {
+            if (!IsTransferSelected)
+            {
+                MessageBox.Show(
+                    "Please select 'Transfer License' option to proceed.",
+                    "Action Not Selected",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var vm = new TransferLicenseViewModel();
+            var win = new TransferLicenseWindow
+            {
+                Owner = Application.Current.MainWindow,
+                DataContext = vm
+            };
+
+            win.ShowDialog();
+        }
+        private void ExecutePrimaryLicenseAction(object obj)
+        {
+            if (IsTransferSelected)
+            {
+                TransferLicense();
+                return;
+            }
+
+            if (IsDeactivateSelected)
+            {
+                DeactivateLicense();
+                return;
+            }
+
+            MessageBox.Show(
+                "Please select a license action.",
+                "No Action Selected",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+   
         #endregion
+
     }
 }
