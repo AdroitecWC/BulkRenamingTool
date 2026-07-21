@@ -22,7 +22,7 @@ namespace RenaimingToolCS.Views
             // Show expiry date if already licensed
             if (LicenseManager.CheckLicense())
             {
-                var licPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Resources\License\License.lic");
+                var licPath = LicenseManager.GetLicensePath();
                 if (File.Exists(licPath))
                 {
                     try
@@ -70,19 +70,61 @@ namespace RenaimingToolCS.Views
 
             try
             {
-                var targetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Resources\License\License.lic");
-                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                var targetPath = LicenseManager.GetLicensePath();
                 File.Copy(selectedFile, targetPath, true);
 
-                if (LicenseManager.CheckLicense())
+                // For node-locked licenses, write the Activated flag first
+                if (!LicenseManager.ActivateLicense())
                 {
-                    MessageBox.Show("License Activated!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    DialogResult = true;
-                    Close();
+                    MessageBox.Show(
+                        "This license is not valid for this machine.\nPlease make sure you selected the correct .lic file.",
+                        "Activation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
                 }
-                else
+
+                var result = LicenseManager.CheckLicenseDetailed();
+
+                switch (result)
                 {
-                    MessageBox.Show("Invalid license file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    case LicenseError.None:
+                        MessageBox.Show("License activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                        DialogResult = true;
+                        Close();
+                        break;
+
+                    case LicenseError.ServerUnreachable:
+                        MessageBox.Show(
+                            "Floating license file copied successfully.\n\n" +
+                            "However, the license server could not be reached.\n" +
+                            "Make sure the FloatingLicenseServer is running on the server machine and the port is correct.\n\n" +
+                            "The license file has been saved — the app will work once the server is reachable.",
+                            "Server Unreachable", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        DialogResult = true;
+                        Close();
+                        break;
+
+                    case LicenseError.NoSeatsAvailable:
+                        MessageBox.Show(
+                            $"No seats available ({LicenseManager.LastSeatsInUse}/{LicenseManager.LastSeatsMax} in use).\n" +
+                            "Ask another user to close the application to free a seat.",
+                            "No Seats Available", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        break;
+
+                    case LicenseError.InvalidLicense:
+                        MessageBox.Show(
+                            "The server does not recognise this license UID.\nPlease contact your administrator.",
+                            "Invalid License", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
+
+                    case LicenseError.Expired:
+                        MessageBox.Show("This license has expired. Please renew it.", "Expired", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
+
+                    default:
+                        MessageBox.Show(
+                            $"License check failed ({result}).\nPlease check the license file and try again.",
+                            "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
                 }
             }
             catch (Exception ex)

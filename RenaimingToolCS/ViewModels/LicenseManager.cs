@@ -1,64 +1,153 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Timers;
+using Microsoft.Win32;
 
 namespace RenaimingToolCS.ViewModels
 {
+    public enum LicenseError
+    {
+        None,               // License is valid
+        LicenseFileMissing, // .lic file not found
+        NotActivated,       // Activated flag is False
+        Expired,            // LastDate is in the past
+        LicenseTransferred, // License was transferred away from this machine
+        MachineMismatch,    // LicenseId does not match this hardware
+        LicenseTampered,    // Decryption failed / file corrupt
+        CryptoError,        // Unexpected crypto exception
+        NoSeatsAvailable,   // Floating: all seats checked out
+        ServerUnreachable,  // Floating: cannot reach license server
+        InvalidLicense,     // Floating: uid not registered on server
+        WrongProduct        // License is for a different product
+    }
+
     public static class LicenseManager
     {
         private const string LicfilePwd = "Kbe@Adr";
-        private const string LicenseFilePath = @"Resources\License\License.lic";
-        private const string RegPath = @"Software\MyCompany\MyTool";
+        private const string AppProduct = "Bulk Rename";
+        private const string UsedLicensesRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\MyTool\UsedLicenses";
 
-        public static bool CheckLicense()
+        // ── Floating license runtime state ───────────────────────────────────────
+        private static string _seatToken = "";
+        private static string _serverUrl = "";
+        private static System.Timers.Timer? _heartbeatTimer;
+        private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(7) };
+
+        // Filled after a NoSeatsAvailable response so the caller can show specifics
+        public static int LastSeatsInUse = 0;
+        public static int LastSeatsMax = 0;
+
+        // =====================================================
+        // PUBLIC API
+        // =====================================================
+
+        /// <summary>True if the license is valid and (for floating) a seat was obtained.</summary>
+        public static bool CheckLicense() => CheckLicenseDetailed() == LicenseError.None;
+
+        /// <summary>Returns the specific reason for failure, or None on success.</summary>
+        public static LicenseError CheckLicenseDetailed()
         {
-            var fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LicenseFilePath);
-            var tempPath = Path.Combine(Path.GetTempPath(), "TempLicCheck.txt");
+            var fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return LicenseError.LicenseFileMissing;
 
-            if (!File.Exists(fullPath))
-                return false;
-
-            // Decrypt License.lic
-            var key = CreateKey(LicfilePwd);
-            var iv = CreateIV(LicfilePwd);
+            Dictionary<string, string> data;
             try
             {
-                EncryptOrDecryptFile(fullPath, tempPath, key, iv, CryptoAction.ActionDecrypt);
+                data = ReadLicense(DecryptFile(fullPath));
             }
             catch
             {
-                return false;
+                return LicenseError.CryptoError;
             }
 
-            // Read decrypted license
             try
             {
-                using (var reader = new StreamReader(tempPath))
+                if (!data.TryGetValue("Activated", out var activated) || activated != "True")
+                    return LicenseError.NotActivated;
+
+                if (data.TryGetValue("LastDate", out var lastDate) && lastDate != "Nil")
                 {
-                    var expiry = reader.ReadLine()?.Replace("LastDate:", "").Trim();
-                    if (!string.Equals(expiry, "Nil", StringComparison.OrdinalIgnoreCase) &&
-                        DateTime.TryParse(expiry, out var expiryDate))
-                    {
-                        if (expiryDate < DateTime.Today)
-                            return false;
-                    }
+                    if (DateTime.TryParse(lastDate, out var exp) && exp < DateTime.Today)
+                        return LicenseError.Expired;
+                }
 
-                    // Validate request code
-                    var expectedCode = GenerateLicenseCode();
-                    foreach (char ch in expectedCode)
-                    {
-                        if (reader.EndOfStream)
-                            return false;
+                // ── FLOATING LICENSE ─────────────────────────────────────────────
+                if (data.TryGetValue("LicenseType", out var licType) && licType == "Floating")
+                {
+                    var licProduct = data.GetValueOrDefault("Product", "");
+                    if (!licProduct.StartsWith(AppProduct, StringComparison.OrdinalIgnoreCase))
+                        return LicenseError.WrongProduct;
 
-                        var val = reader.ReadLine();
-                        if (!int.TryParse(val, out int intVal) || intVal != (int)ch)
-                            return false;
+                    var uid = data.GetValueOrDefault("LicenseUid", "");
+                    _serverUrl = data.GetValueOrDefault("ServerUrl", "").TrimEnd('/');
+                    if (uid == "" || _serverUrl == "") return LicenseError.LicenseTampered;
+
+                    return FloatingCheckoutDetailed(uid, GenerateLicenseCode());
+                }
+
+                // ── NODE-LOCKED LICENSE ──────────────────────────────────────────
+                var currentSystemCode = GenerateLicenseCode();
+
+                if (data.TryGetValue("LicenseUid", out var licUid) && IsLicenseUsed("TRANSFERRED_LIC_" + licUid))
+                    return LicenseError.LicenseTransferred;
+
+                if (!data.TryGetValue("LicenseId", out var licenseId) || licenseId != currentSystemCode)
+                    return LicenseError.MachineMismatch;
+
+                // Character-by-character binding
+                for (var i = 0; i < currentSystemCode.Length; i++)
+                {
+                    var key = $"C{i}";
+                    if (!data.TryGetValue(key, out var stored) ||
+                        !int.TryParse(stored, out var storedVal) ||
+                        storedVal != currentSystemCode[i])
+                    {
+                        return LicenseError.MachineMismatch;
                     }
                 }
 
+                return LicenseError.None;
+            }
+            catch
+            {
+                return LicenseError.LicenseTampered;
+            }
+        }
+
+        // =====================================================
+        // ACTIVATE LICENSE (FIRST TIME — node-locked only)
+        // =====================================================
+        public static bool ActivateLicense()
+        {
+            var fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return false;
+
+            try
+            {
+                var data = ReadLicense(DecryptFile(fullPath));
+
+                // Floating licenses are pre-activated by the server
+                if (data.TryGetValue("LicenseType", out var licType) && licType == "Floating")
+                    return true;
+
+                var currentSystemCode = GenerateLicenseCode();
+
+                if (data.TryGetValue("LicenseUid", out var licUid) && IsLicenseUsed("TRANSFERRED_LIC_" + licUid))
+                    return false;
+
+                if (!data.TryGetValue("LicenseId", out var licenseId) || licenseId != currentSystemCode)
+                    return false;
+
+                data["Activated"] = "True";
+                data["Transferred"] = "False";
+                EncryptToFile(SerializeLicense(data), fullPath);
                 return true;
             }
             catch
@@ -67,20 +156,205 @@ namespace RenaimingToolCS.ViewModels
             }
         }
 
-        public static string GenerateLicenseCode()
+        // =====================================================
+        // DEACTIVATE LICENSE
+        // =====================================================
+        public static bool DeactivateLicense()
         {
-            return GetSystemInfo();
+            var fullPath = GetLicensePath();
+            if (!File.Exists(fullPath)) return false;
+
+            try
+            {
+                var data = ReadLicense(DecryptFile(fullPath));
+
+                if (data.TryGetValue("LicenseType", out var licType) && licType == "Floating")
+                    FloatingRelease();
+
+                data["Activated"] = "False";
+                EncryptToFile(SerializeLicense(data), fullPath);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
-        private static string GetSystemInfo()
+        // =====================================================
+        // FLOATING — CHECKOUT / RELEASE / HEARTBEAT
+        // =====================================================
+        private static LicenseError FloatingCheckoutDetailed(string uid, string machineCode)
         {
-            var info = new StringBuilder();
-            info.Append(GetWMI("Win32_Processor", "ProcessorId"));
-            info.Append(GetWMI("Win32_BaseBoard", "Product"));
-            info.Append(GetWMI("Win32_DiskDrive", "Signature"));
-            info.Append(GetWMI("Win32_BIOS", "Version"));
+            try
+            {
+                var machineName = Environment.MachineName;
+                var body = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["uid"] = uid,
+                    ["machine"] = machineCode,
+                    ["machine_name"] = machineName
+                });
 
-            return new string(info.ToString().Where(char.IsLetterOrDigit).ToArray());
+                string json;
+                try
+                {
+                    var resp = _http.PostAsync($"{_serverUrl}/checkout.php", body).GetAwaiter().GetResult();
+                    json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                }
+                catch
+                {
+                    return LicenseError.ServerUnreachable;
+                }
+
+                // If the response isn't JSON (e.g. HTML 404 from a wrong port/URL), treat as unreachable
+                if (!json.TrimStart().StartsWith("{"))
+                    return LicenseError.ServerUnreachable;
+
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var success = root.TryGetProperty("success", out var successEl) &&
+                              successEl.ValueKind == JsonValueKind.True;
+
+                if (success && root.TryGetProperty("seat_token", out var tokenEl))
+                {
+                    _seatToken = tokenEl.GetString() ?? "";
+                    LastSeatsInUse = root.TryGetProperty("in_use", out var u1) ? u1.GetInt32() : 0;
+                    LastSeatsMax = root.TryGetProperty("max_seats", out var m1) ? m1.GetInt32() : 0;
+                    StartHeartbeat();
+                    return LicenseError.None;
+                }
+
+                LastSeatsInUse = root.TryGetProperty("in_use", out var u2) ? u2.GetInt32() : 0;
+                LastSeatsMax = root.TryGetProperty("max_seats", out var m2) ? m2.GetInt32() : 0;
+
+                var reason = root.TryGetProperty("reason", out var reasonEl) ? reasonEl.GetString() : "";
+                if (reason == "no_seats") return LicenseError.NoSeatsAvailable;
+                if (reason == "invalid_license") return LicenseError.InvalidLicense;
+                return LicenseError.NoSeatsAvailable;
+            }
+            catch
+            {
+                return LicenseError.ServerUnreachable;
+            }
+        }
+
+        public static void FloatingRelease()
+        {
+            if (_seatToken == "" || _serverUrl == "") return;
+            StopHeartbeat();
+            try
+            {
+                var body = new FormUrlEncodedContent(new Dictionary<string, string> { ["seat_token"] = _seatToken });
+                _http.PostAsync($"{_serverUrl}/release.php", body).GetAwaiter().GetResult();
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _seatToken = "";
+            }
+        }
+
+        private static void StartHeartbeat()
+        {
+            StopHeartbeat();
+            _heartbeatTimer = new System.Timers.Timer(180000) { AutoReset = true }; // every 3 minutes
+            _heartbeatTimer.Elapsed += OnHeartbeat;
+            _heartbeatTimer.Start();
+        }
+
+        private static void OnHeartbeat(object? sender, ElapsedEventArgs e)
+        {
+            if (_seatToken == "" || _serverUrl == "") return;
+            try
+            {
+                var body = new FormUrlEncodedContent(new Dictionary<string, string> { ["seat_token"] = _seatToken });
+                _http.PostAsync($"{_serverUrl}/heartbeat.php", body).GetAwaiter().GetResult();
+            }
+            catch
+            {
+            }
+        }
+
+        private static void StopHeartbeat()
+        {
+            if (_heartbeatTimer is null) return;
+            _heartbeatTimer.Stop();
+            _heartbeatTimer.Dispose();
+            _heartbeatTimer = null;
+        }
+
+        public static bool IsFloatingLicense()
+        {
+            var path = GetLicensePath();
+            if (!File.Exists(path)) return false;
+            try
+            {
+                var data = ReadLicense(DecryptFile(path));
+                return data.TryGetValue("LicenseType", out var t) && t == "Floating";
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // =====================================================
+        // MACHINE CODE
+        // =====================================================
+        public static string GetLicensePath()
+        {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "License", "License.lic");
+            var dir = Path.GetDirectoryName(path)!;
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            return path;
+        }
+
+        // Salts the fingerprint so this tool's code never coincides with another
+        // Adroitec tool's code on the same machine, even though the underlying
+        // hardware fields are identical. Change per tool.
+        private const string ToolName = "BulkRenameToolEdition";
+        private const string SerialAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+        public static string GenerateLicenseCode()
+        {
+            // Same algorithm as SpreadSheetBasedAutomation's LicenseManager.vb:
+            // hash the raw WMI fingerprint (+ ComputerSystemProduct.UUID, included
+            // because the other four fields are model/firmware strings that repeat
+            // across identical hardware batches) and encode it into a readable
+            // dashed serial, rather than exposing the raw WMI values directly.
+            var raw =
+                ToolName + "|" +
+                GetWMI("Win32_Processor", "ProcessorId") +
+                GetWMI("Win32_BaseBoard", "Product") +
+                GetWMI("Win32_DiskDrive", "Signature") +
+                GetWMI("Win32_BIOS", "Version") +
+                GetWMI("Win32_ComputerSystemProduct", "UUID");
+
+            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
+            var serial = EncodeToSerial(hashBytes, 20); // 20-char code
+
+            return string.Join("-", SplitInChunks(serial, 5));
+        }
+
+        private static string EncodeToSerial(byte[] hash, int length)
+        {
+            var sb = new StringBuilder();
+            for (var i = 0; i < length; i++)
+            {
+                var b = hash[i % hash.Length];
+                var idx = (b + i * 7) % SerialAlphabet.Length;
+                sb.Append(SerialAlphabet[idx]);
+            }
+            return sb.ToString();
+        }
+
+        private static IEnumerable<string> SplitInChunks(string s, int chunkSize)
+        {
+            for (var i = 0; i < s.Length; i += chunkSize)
+                yield return s.Substring(i, Math.Min(chunkSize, s.Length - i));
         }
 
         private static string GetWMI(string className, string propertyName)
@@ -91,8 +365,7 @@ namespace RenaimingToolCS.ViewModels
                 foreach (var obj in searcher.Get())
                 {
                     var value = obj[propertyName];
-                    if (value != null)
-                        return value.ToString();
+                    if (value != null) return value.ToString() ?? "";
                 }
             }
             catch
@@ -103,46 +376,71 @@ namespace RenaimingToolCS.ViewModels
             return "";
         }
 
-        public enum CryptoAction
+        // =====================================================
+        // FILE IO
+        // =====================================================
+        private static Dictionary<string, string> ReadLicense(byte[] plainBytes)
         {
-            ActionEncrypt = 1,
-            ActionDecrypt = 2
-        }
-
-        public static byte[] CreateKey(string password)
-        {
-            using var sha = new SHA512Managed();
-            var hash = sha.ComputeHash(Encoding.ASCII.GetBytes(password));
-            return hash.Take(32).ToArray(); // AES-256
-        }
-
-        public static byte[] CreateIV(string password)
-        {
-            using var sha = new SHA512Managed();
-            var hash = sha.ComputeHash(Encoding.ASCII.GetBytes(password));
-            return hash.Skip(32).Take(16).ToArray(); // AES block size = 16 bytes
-        }
-
-        public static void EncryptOrDecryptFile(string inputPath, string outputPath, byte[] key, byte[] iv, CryptoAction direction)
-        {
-            using var fsInput = new FileStream(inputPath, FileMode.Open, FileAccess.Read);
-            using var fsOutput = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-            using var csp = new RijndaelManaged();
-
-            CryptoStream cs;
-            if (direction == CryptoAction.ActionEncrypt)
-                cs = new CryptoStream(fsOutput, csp.CreateEncryptor(key, iv), CryptoStreamMode.Write);
-            else
-                cs = new CryptoStream(fsOutput, csp.CreateDecryptor(key, iv), CryptoStreamMode.Write);
-
-            var buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = fsInput.Read(buffer, 0, buffer.Length)) > 0)
+            var dict = new Dictionary<string, string>();
+            var text = Encoding.UTF8.GetString(plainBytes);
+            foreach (var line in text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
             {
-                cs.Write(buffer, 0, bytesRead);
+                var idx = line.IndexOf(':');
+                if (idx > 0) dict[line[..idx].Trim()] = line[(idx + 1)..].Trim();
             }
+            return dict;
+        }
 
-            cs.Close();
+        private static string SerializeLicense(Dictionary<string, string> data)
+        {
+            var sb = new StringBuilder();
+            foreach (var kv in data) sb.Append($"{kv.Key}:{kv.Value}\n");
+            return sb.ToString();
+        }
+
+        // =====================================================
+        // REGISTRY
+        // =====================================================
+        private static bool IsLicenseUsed(string id)
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(UsedLicensesRegPath);
+            return k?.GetValue(id) != null;
+        }
+
+        // =====================================================
+        // CRYPTO
+        // =====================================================
+        private static byte[] DecryptFile(string path)
+        {
+            var (key, iv) = LicKeyIv();
+            using var aes = Aes.Create();
+            aes.Key = key;
+            aes.IV = iv;
+            using var ms = new MemoryStream();
+            using (var fs = File.OpenRead(path))
+            using (var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
+            {
+                fs.CopyTo(cs);
+            }
+            return ms.ToArray();
+        }
+
+        private static void EncryptToFile(string plainText, string path)
+        {
+            var (key, iv) = LicKeyIv();
+            using var aes = Aes.Create();
+            aes.Key = key;
+            aes.IV = iv;
+            using var fsOut = File.Create(path);
+            using var cs = new CryptoStream(fsOut, aes.CreateEncryptor(), CryptoStreamMode.Write);
+            var bytes = Encoding.UTF8.GetBytes(plainText);
+            cs.Write(bytes, 0, bytes.Length);
+        }
+
+        private static (byte[] Key, byte[] IV) LicKeyIv()
+        {
+            var hash = SHA512.HashData(Encoding.ASCII.GetBytes(LicfilePwd)); // matches PHP sha512() on the same ASCII password
+            return (hash.Take(32).ToArray(), hash.Skip(32).Take(16).ToArray());
         }
     }
 }

@@ -44,6 +44,12 @@ namespace RenaimingToolCS
                 }
             }
         }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            LicenseManager.FloatingRelease();
+            base.OnExit(e);
+        }
     }
 
 }

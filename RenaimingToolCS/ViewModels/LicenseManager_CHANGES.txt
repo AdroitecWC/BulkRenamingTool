@@ -1,0 +1,127 @@
+Add floating-license support to RenamingToolCS (Bulk Rename) — change log
+Date: 2026-07-01
+
+GOAL
+  Run RenamingToolCS ("Bulk Rename") and SpreadSheetBasedAutomation off the
+  SAME FloatingLicenseServer instance simultaneously, each with its own
+  seat count.
+
+FILES CHANGED
+  1. RenaimingToolCS\ViewModels\LicenseManager.cs   — rewritten
+  2. RenaimingToolCS\Views\LicenseWindow.xaml.cs     — activation flow updated
+  3. RenaimingToolCS\App.xaml.cs                     — release seat on exit
+  4. FloatingLicenseServer\FloatingLicenseServer.vbproj  — pre-existing build bug fixed
+  5. FloatingLicenseServer\linux\LicenseServer.vb        — pre-existing build bug fixed
+  6. FloatingLicenseServer\linux\FloatingLicenseServerLinux.vbproj — pre-existing build bug fixed
+
+── SERVER SIDE: NO CHANGES NEEDED FOR MULTI-PRODUCT ──────────────────
+  FloatingLicenseServer already supports multiple products with
+  independent seat pools out of the box:
+    - LicenseServer.vb keeps licenses in a Dictionary(Of Uid, LicenseData),
+      each entry carrying its own MaxSeats.
+    - Checkout() looks up the license by the UID sent from the client and
+      counts only sessions with that same UID against that license's
+      MaxSeats — one product being full does not affect the other.
+    - MainWindow.xaml.vb / linux Program.vb already load and serve any
+      number of .lic files added to the same running server.
+  To run both tools together: generate one floating .lic for
+  "Spreadsheet Based Automation" (or "...enterprise") and one for
+  "Bulk Rename" via the web generator (same Server Machine Code, different
+  seat counts as needed), then load both files into the one running
+  FloatingLicenseServer (Add License, or drop both .lic files next to the
+  exe). Each shows up as its own row with its own seat count in the UI.
+
+── 1. RenaimingToolCS\ViewModels\LicenseManager.cs ────────────────────
+  Previously: node-locked only, and its CheckLicense() read a license
+  file format (first line "LastDate:...", then one raw ASCII-code line
+  per character) that DOES NOT match anything license_generator.php on
+  the web app actually generates (which writes "LicenseId:", "Activated:",
+  etc. key:value pairs). This tool could not accept a license file
+  produced by the current web generator — licensing here was effectively
+  non-functional against this system. Fixed as part of this rewrite.
+
+  Now: ported from SpreadSheetBasedAutomation's LicenseManager.vb —
+    - LicenseError enum + CheckLicenseDetailed() (node-locked AND floating)
+    - Key:value license file parser (any field order, matches the PHP
+      generator's actual output for both formats)
+    - GenerateLicenseCode(): same WMI fields as before (ProcessorId,
+      BaseBoard.Product, DiskDrive.Signature, BIOS.Version) PLUS
+      Win32_ComputerSystemProduct.UUID — same collision fix applied to
+      SpreadSheetBasedAutomation and FloatingLicenseServer earlier today,
+      for the same reason (the first four fields are model/firmware
+      strings that repeat across identical hardware batches; UUID is the
+      field OEMs set to be unique per machine).
+    - Floating checkout/heartbeat/release against
+      <ServerUrl>/checkout.php, /heartbeat.php, /release.php — same
+      protocol as SpreadSheetBasedAutomation, so it talks to the exact
+      same FloatingLicenseServer.
+    - AppProduct = "Bulk Rename" — the WrongProduct check requires the
+      license's Product field to start with this, so a license generated
+      for a different registered product won't activate here.
+  Modernization note: replaced RijndaelManaged (obsolete in .NET 6+) with
+  Aes.Create() — bit-identical output (both are AES-256-CBC/PKCS7 with a
+  128-bit block), so no format change, just removes an obsolete-API
+  warning. Also replaced regex JSON parsing (used in the VB version,
+  written for old .NET Framework) with System.Text.Json, which is built
+  into net8.0 and more robust.
+  Not ported: TransferLicense()/DeactivateLicense() UI — no Transfer
+  window exists in this app's UI yet, so only the underlying
+  DeactivateLicense() helper was added; wire up a Transfer window later
+  if that flow is needed here.
+
+── 2. Views\LicenseWindow.xaml.cs ──────────────────────────────────────
+  btnActivate_Click now calls ActivateLicense() + CheckLicenseDetailed()
+  and switches on the specific LicenseError, matching
+  SpreadSheetBasedAutomation's LicenseWindow.xaml.vb — floating-specific
+  outcomes (ServerUnreachable, NoSeatsAvailable, InvalidLicense) get their
+  own message instead of a generic "Invalid license file." Also now calls
+  LicenseManager.GetLicensePath() instead of duplicating the path string
+  in two places.
+
+── 3. App.xaml.cs ──────────────────────────────────────────────────────
+  Added OnExit override calling LicenseManager.FloatingRelease() so a
+  floating seat is freed when the app closes — without this, seats would
+  stay "checked out" until the 10-minute server-side heartbeat timeout.
+
+── 4/5/6. Pre-existing build breaks fixed (unrelated to the feature, found while verifying) ──
+  These blocked building FloatingLicenseServer.vbproj and
+  FloatingLicenseServerLinux.vbproj entirely — found because I rebuilt
+  both to confirm the earlier UUID fingerprint change compiled. Not
+  related to today's floating-license feature work, fixing them was
+  required to verify anything in FloatingLicenseServer at all:
+    - FloatingLicenseServer.vbproj had no exclusion for the linux/
+      subfolder, so SDK-style default globbing pulled linux/LicenseServer.vb
+      into the Windows build too, causing duplicate-class errors
+      (BC30179) against the root LicenseServer.vb. Added
+      <Compile Remove="linux\**\*.vb" />.
+    - linux/LicenseServer.vb: "Using aes = Aes.Create()" failed to compile
+      (BC30980, type of 'aes' cannot be inferred) — needed an explicit
+      "As Aes".
+    - linux/FloatingLicenseServerLinux.vbproj: <StartupObject>Program</StartupObject>
+      didn't resolve because Program.vb's Module Program has no explicit
+      Namespace, so with RootNamespace=FloatingLicenseServer set, VB
+      qualifies it as FloatingLicenseServer.Program. Fixed StartupObject
+      to the fully qualified name.
+
+VERIFIED
+  Built all four projects successfully with full MSBuild (dotnet CLI
+  can't build any of these — RenaimingToolCS has a COM reference to Creo
+  (pfcls) and the *.vbproj Windows projects require Windows Forms/WPF
+  desktop targeting pack, neither supported by `dotnet build`):
+    - RenaimingToolCS.csproj                    -> builds (warnings pre-existing, unrelated)
+    - FloatingLicenseServer.vbproj               -> builds clean
+    - FloatingLicenseServerLinux.vbproj          -> builds clean
+    - SpreadSheetBasedAutomation.vbproj          -> compiles (final exe copy
+      only failed because the app was running at the time — a file lock,
+      not a code error)
+
+NOT DONE / OUT OF SCOPE
+  - No change to config.php's PRODUCTS list — "Bulk Rename" already
+    exists there, reused per your choice instead of adding a new entry.
+  - No Transfer-license window added to RenamingToolCS.
+  - Not tested end-to-end against a live FloatingLicenseServer instance
+    (build-verified only) — recommend a manual pass: generate a floating
+    .lic for "Bulk Rename" via the web generator using this server's
+    machine code, load it alongside the Spreadsheet Automation .lic on
+    one running FloatingLicenseServer, and confirm both tools can check
+    out seats independently.
