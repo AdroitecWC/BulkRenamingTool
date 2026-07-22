@@ -133,6 +133,29 @@ namespace RenaimingToolCS.Views
             }
         }
 
+        private void btnConnectServer_Click(object sender, RoutedEventArgs e)
+        {
+            var address = txtNetworkServer.Text.Trim();
+            if (address == "")
+            {
+                MessageBox.Show("Enter a server address, e.g. vizserver:1122.", "Network License Server",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            btnConnectServer.IsEnabled = false;
+            try
+            {
+                var ok = LicenseManager.TestAndSaveServerUrl(address, out var message);
+                MessageBox.Show(message, ok ? "Connected" : "Connection Failed",
+                    MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnConnectServer.IsEnabled = true;
+            }
+        }
+
         private void btnCancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;

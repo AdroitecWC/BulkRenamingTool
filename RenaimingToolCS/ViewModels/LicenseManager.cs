@@ -33,6 +33,7 @@ namespace RenaimingToolCS.ViewModels
         private const string LicfilePwd = "Kbe@Adr";
         private const string AppProduct = "Bulk Rename";
         private const string UsedLicensesRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\MyTool\UsedLicenses";
+        private const string SettingsRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\MyTool\Settings";
 
         // ── Floating license runtime state ───────────────────────────────────────
         private static string _seatToken = "";
@@ -86,7 +87,10 @@ namespace RenaimingToolCS.ViewModels
                         return LicenseError.WrongProduct;
 
                     var uid = data.GetValueOrDefault("LicenseUid", "");
-                    _serverUrl = data.GetValueOrDefault("ServerUrl", "").TrimEnd('/');
+                    // A manually entered + verified address (Network License Server field) takes
+                    // precedence over whatever ServerUrl is baked into the .lic file, since that's
+                    // exactly the point of letting an admin repoint a client without reissuing a license.
+                    _serverUrl = GetServerUrlOverride() ?? data.GetValueOrDefault("ServerUrl", "").TrimEnd('/');
                     if (uid == "" || _serverUrl == "") return LicenseError.LicenseTampered;
 
                     return FloatingCheckoutDetailed(uid, GenerateLicenseCode());
@@ -396,6 +400,88 @@ namespace RenaimingToolCS.ViewModels
             var sb = new StringBuilder();
             foreach (var kv in data) sb.Append($"{kv.Key}:{kv.Value}\n");
             return sb.ToString();
+        }
+
+        // =====================================================
+        // NETWORK LICENSE SERVER — manual address entry + connectivity test
+        // =====================================================
+
+        /// <summary>
+        /// Parses a "host", "host:port", or "host@port" address (matching the Server
+        /// Name shown on the FloatingLicenseServer app), probes its checkout endpoint,
+        /// and — only if a server actually answers — saves it so future floating
+        /// checkouts use this address instead of the one baked into the .lic file.
+        /// </summary>
+        public static bool TestAndSaveServerUrl(string rawAddress, out string message)
+        {
+            var url = BuildServerUrl(rawAddress);
+            if (url == null)
+            {
+                message = "Enter a server address, e.g. vizserver:1122 or vizserver@1122.";
+                return false;
+            }
+
+            try
+            {
+                var body = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["uid"] = "__connectivity_test__",
+                    ["machine"] = "connectivity-test",
+                    ["machine_name"] = "connectivity-test"
+                });
+                var resp = _http.PostAsync($"{url}/checkout.php", body).GetAwaiter().GetResult();
+                var json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (!json.TrimStart().StartsWith("{"))
+                {
+                    message = $"No license server responded at {url}.";
+                    return false;
+                }
+            }
+            catch
+            {
+                message = $"Could not reach a license server at {url}.\nCheck the address and try again.";
+                return false;
+            }
+
+            SaveServerUrlOverride(url);
+            message = $"Connected to the license server at {url} successfully.";
+            return true;
+        }
+
+        private static string? BuildServerUrl(string rawAddress)
+        {
+            var addr = (rawAddress ?? "").Trim();
+            if (addr == "") return null;
+
+            var sep = addr.Contains('@') ? '@' : (addr.Contains(':') ? ':' : '\0');
+            string host;
+            var port = 80;
+            if (sep != '\0')
+            {
+                var parts = addr.Split(sep, 2);
+                host = parts[0].Trim();
+                if (!int.TryParse(parts[1].Trim(), out port)) port = 80;
+            }
+            else
+            {
+                host = addr;
+            }
+            if (host == "") return null;
+
+            return port == 80 ? $"http://{host}/web/api/floating" : $"http://{host}:{port}/web/api/floating";
+        }
+
+        private static void SaveServerUrlOverride(string url)
+        {
+            using var k = Registry.CurrentUser.CreateSubKey(SettingsRegPath);
+            k?.SetValue("FloatingServerOverride", url);
+        }
+
+        private static string? GetServerUrlOverride()
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(SettingsRegPath);
+            var v = k?.GetValue("FloatingServerOverride") as string;
+            return string.IsNullOrWhiteSpace(v) ? null : v;
         }
 
         // =====================================================
