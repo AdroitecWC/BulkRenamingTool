@@ -208,7 +208,8 @@ namespace RenaimingToolCS.ViewModels
                 {
                     ["uid"] = uid,
                     ["machine"] = machineCode,
-                    ["machine_name"] = machineName
+                    ["machine_name"] = machineName,
+                    ["product"] = AppProduct
                 });
 
                 string json;
@@ -246,6 +247,7 @@ namespace RenaimingToolCS.ViewModels
                 var reason = root.TryGetProperty("reason", out var reasonEl) ? reasonEl.GetString() : "";
                 if (reason == "no_seats") return LicenseError.NoSeatsAvailable;
                 if (reason == "invalid_license") return LicenseError.InvalidLicense;
+                if (reason == "wrong_product") return LicenseError.WrongProduct;
                 return LicenseError.NoSeatsAvailable;
             }
             catch
