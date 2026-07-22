@@ -55,6 +55,17 @@ namespace RenaimingToolCS.ViewModels
         /// <summary>Returns the specific reason for failure, or None on success.</summary>
         public static LicenseError CheckLicenseDetailed()
         {
+            // A key-based activation (License Key field, no .lic file at all) takes
+            // priority over a local file every time — once someone's activated with
+            // a key, that's the intended source of truth for this install.
+            var activatedUid = GetActivatedUid();
+            if (activatedUid != null)
+            {
+                _serverUrl = GetServerUrlOverride() ?? "";
+                if (_serverUrl == "") return LicenseError.LicenseTampered;
+                return FloatingCheckoutDetailed(activatedUid, GenerateLicenseCode());
+            }
+
             var fullPath = GetLicensePath();
             if (!File.Exists(fullPath)) return LicenseError.LicenseFileMissing;
 
@@ -482,6 +493,73 @@ namespace RenaimingToolCS.ViewModels
             using var k = Registry.CurrentUser.OpenSubKey(SettingsRegPath);
             var v = k?.GetValue("FloatingServerOverride") as string;
             return string.IsNullOrWhiteSpace(v) ? null : v;
+        }
+
+        /// <summary>
+        /// Activates a floating license by License Key alone (the Uid shown in
+        /// FloatingLicenseServer's grid) against the given server address, with no
+        /// .lic file needed at all. Saves both so every future launch checks out
+        /// the same way (see CheckLicenseDetailed).
+        /// </summary>
+        public static bool ActivateWithKey(string uid, string serverAddress, out string message)
+        {
+            uid = (uid ?? "").Trim();
+            if (uid == "")
+            {
+                message = "Enter the License Key shown in FloatingLicenseServer.";
+                return false;
+            }
+
+            var url = BuildServerUrl(serverAddress);
+            if (url == null)
+            {
+                message = "Enter a server address, e.g. vizserver:1122 or vizserver@1122.";
+                return false;
+            }
+
+            SaveServerUrlOverride(url);
+            SaveActivatedUid(uid);
+
+            var result = FloatingCheckoutDetailed(uid, GenerateLicenseCode());
+            if (result == LicenseError.None)
+            {
+                message = "Activated successfully.";
+                return true;
+            }
+
+            // Only a genuinely wrong key should un-stick the saved activation --
+            // NoSeatsAvailable/ServerUnreachable are transient and should keep
+            // retrying on the next launch, same as a normal floating .lic would.
+            if (result == LicenseError.InvalidLicense) ClearActivatedUid();
+
+            message = result switch
+            {
+                LicenseError.NoSeatsAvailable => $"No seats available ({LastSeatsInUse}/{LastSeatsMax} in use).",
+                LicenseError.InvalidLicense => "The server does not recognise this License Key.",
+                LicenseError.ServerUnreachable => $"Could not reach a license server at {url}.",
+                LicenseError.WrongProduct => "This License Key was issued for a different Adroitec product.",
+                _ => $"Activation failed ({result})."
+            };
+            return false;
+        }
+
+        private static void SaveActivatedUid(string uid)
+        {
+            using var k = Registry.CurrentUser.CreateSubKey(SettingsRegPath);
+            k?.SetValue("ActivatedFloatingUid", uid);
+        }
+
+        private static string? GetActivatedUid()
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(SettingsRegPath);
+            var v = k?.GetValue("ActivatedFloatingUid") as string;
+            return string.IsNullOrWhiteSpace(v) ? null : v;
+        }
+
+        private static void ClearActivatedUid()
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(SettingsRegPath, writable: true);
+            k?.DeleteValue("ActivatedFloatingUid", throwOnMissingValue: false);
         }
 
         // =====================================================

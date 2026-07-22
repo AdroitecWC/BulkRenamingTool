@@ -61,6 +61,23 @@ namespace RenaimingToolCS.Views
 
         private void btnActivate_Click(object sender, RoutedEventArgs e)
         {
+            var licenseKey = txtLicenseKey.Text.Trim();
+            if (licenseKey != "")
+            {
+                var ok = LicenseManager.ActivateWithKey(licenseKey, txtNetworkServer.Text.Trim(), out var keyMessage);
+                if (ok)
+                {
+                    MessageBox.Show(keyMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    DialogResult = true;
+                    Close();
+                }
+                else
+                {
+                    MessageBox.Show(keyMessage, "Activation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                return;
+            }
+
             var selectedFile = txtFilePath.Text.Trim();
             if (!File.Exists(selectedFile))
             {
