@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RenaimingToolCS.Views"
         mc:Ignorable="d"
-        Title="LicenseWindow" Height="450" Width="800">
+        Title="LicenseWindow" Height="640" Width="620">
     <Window.Resources>
         <!-- Company Theme Resources -->
         <SolidColorBrush x:Key="BackgroundColor" Color="White"/>
@@ -257,88 +257,99 @@
         </Grid>
 
 
-        <!-- Form Fields -->
-        <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Stretch">
+        <!-- Form Fields — scrollable so nothing clips regardless of window size or content added later -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel VerticalAlignment="Top" HorizontalAlignment="Stretch">
 
-            <StackPanel Margin="0,0,0,5">
+            <!-- Node-Locked vs Floating (NLM) — each activation path lives in its own tab
+                 so the node-locked flow looks exactly like the plain node-locked form it
+                 always was, instead of being cluttered by the floating-only fields. System
+                 Name/Request Code only matter for node-locked (that's what you send an admin
+                 to get a matching .lic issued), so they live in that tab only. -->
+            <TabControl Margin="0,0,0,15">
+                <TabItem Header="Node-Locked">
+                    <StackPanel Margin="0,12,0,0">
+                        <!-- System Name -->
+                        <StackPanel Margin="0,0,0,5">
+                            <TextBlock Text="System Name"
+                                       Style="{StaticResource FilterLabelStyle}" Margin="5"/>
+                            <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
+                                <TextBox x:Name="txtSystemName" IsReadOnly="True"
+                                         Background="Transparent" BorderThickness="0"
+                                         VerticalContentAlignment="Center" Padding="8,0"/>
+                            </Border>
+                        </StackPanel>
 
-                <DockPanel LastChildFill="True">
-                    <Button x:Name="btnBrowse"
-            Content="Browse License File"
-            Style="{StaticResource RoundedButtonStyle}"
-            Margin="0,0,10,0"
-            MinWidth="140"
-            HorizontalAlignment="Left"
-            Click="btnBrowse_Click"/>
+                        <!-- Request Code -->
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Request Code"
+                                       Style="{StaticResource FilterLabelStyle}" Margin="5"/>
+                            <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
+                                <TextBox x:Name="txtRequestCode" IsReadOnly="True"
+                                         TextWrapping="Wrap"
+                                         Background="Transparent" BorderThickness="0"
+                                         VerticalContentAlignment="Center" Padding="8,0"/>
+                            </Border>
+                        </StackPanel>
 
-                    <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32" 
-            DockPanel.Dock="Left">
-                        <TextBox x:Name="txtFilePath"
-                 Background="Transparent" BorderThickness="0"
-                 VerticalContentAlignment="Center" Padding="8,0"/>
-                    </Border>
-                </DockPanel>
-            </StackPanel>
-            <!-- System Name -->
-            <StackPanel Margin="0,0,0,5">
-                <TextBlock Text="System Name"
-                           Style="{StaticResource FilterLabelStyle}" Margin="5"/>
-                <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
-                    <TextBox x:Name="txtSystemName" IsReadOnly="True"
-                             Background="Transparent" BorderThickness="0"
-                             VerticalContentAlignment="Center" Padding="8,0"/>
-                </Border>
-            </StackPanel>
+                        <DockPanel LastChildFill="True">
+                            <Button x:Name="btnBrowse"
+                                    Content="Browse License File"
+                                    Style="{StaticResource RoundedButtonStyle}"
+                                    Margin="0,0,10,0"
+                                    MinWidth="140"
+                                    HorizontalAlignment="Left"
+                                    DockPanel.Dock="Left"
+                                    Click="btnBrowse_Click"/>
+                            <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
+                                <TextBox x:Name="txtFilePath"
+                                         Background="Transparent" BorderThickness="0"
+                                         VerticalContentAlignment="Center" Padding="8,0"/>
+                            </Border>
+                        </DockPanel>
+                    </StackPanel>
+                </TabItem>
 
-            <!-- Request Code -->
-            <StackPanel Margin="0,0,0,15">
-                <TextBlock Text="Request Code"
-                           Style="{StaticResource FilterLabelStyle}" Margin="5"/>
-                <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
-                    <TextBox x:Name="txtRequestCode" IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             Background="Transparent" BorderThickness="0"
-                             VerticalContentAlignment="Center" Padding="8,0"/>
-                </Border>
-            </StackPanel>
+                <TabItem Header="Floating License Server (NLM)">
+                    <StackPanel Margin="0,12,0,0">
+                        <!-- Network License Server -->
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Network License Server"
+                                       Style="{StaticResource FilterLabelStyle}" Margin="5"/>
+                            <DockPanel LastChildFill="True">
+                                <Button x:Name="btnConnectServer"
+                                        Content="Connect"
+                                        Style="{StaticResource RoundedButtonStyle}"
+                                        Margin="10,0,0,0"
+                                        MinWidth="100"
+                                        DockPanel.Dock="Right"
+                                        Click="btnConnectServer_Click"/>
+                                <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
+                                    <TextBox x:Name="txtNetworkServer"
+                                             Background="Transparent" BorderThickness="0"
+                                             VerticalContentAlignment="Center" Padding="8,0"/>
+                                </Border>
+                            </DockPanel>
+                            <TextBlock Text="e.g. vizserver:1122 — the name and port shown on the FloatingLicenseServer app"
+                                       FontSize="11" Foreground="Gray" Margin="5,4,0,0"/>
+                        </StackPanel>
 
-            <!-- License File Path -->
-
-            <!-- Network License Server -->
-            <StackPanel Margin="0,0,0,15">
-                <TextBlock Text="Network License Server"
-                           Style="{StaticResource FilterLabelStyle}" Margin="5"/>
-                <DockPanel LastChildFill="True">
-                    <Button x:Name="btnConnectServer"
-                            Content="Connect"
-                            Style="{StaticResource RoundedButtonStyle}"
-                            Margin="10,0,0,0"
-                            MinWidth="100"
-                            DockPanel.Dock="Right"
-                            Click="btnConnectServer_Click"/>
-                    <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
-                        <TextBox x:Name="txtNetworkServer"
-                                 Background="Transparent" BorderThickness="0"
-                                 VerticalContentAlignment="Center" Padding="8,0"/>
-                    </Border>
-                </DockPanel>
-                <TextBlock Text="e.g. vizserver:1122 — the name and port shown on the FloatingLicenseServer app"
-                           FontSize="11" Foreground="Gray" Margin="5,4,0,0"/>
-            </StackPanel>
-
-            <!-- License Key — activates a floating license directly against the
-                 Network License Server above, with no .lic file needed at all -->
-            <StackPanel Margin="0,0,0,15">
-                <TextBlock Text="License Key"
-                           Style="{StaticResource FilterLabelStyle}" Margin="5"/>
-                <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
-                    <TextBox x:Name="txtLicenseKey"
-                             Background="Transparent" BorderThickness="0"
-                             VerticalContentAlignment="Center" Padding="8,0"/>
-                </Border>
-                <TextBlock Text="Optional alternative to Browse License File — paste the key shown for this license in FloatingLicenseServer, then Activate."
-                           FontSize="11" Foreground="Gray" Margin="5,4,0,0" TextWrapping="Wrap"/>
-            </StackPanel>
+                        <!-- License Key — activates directly against the Network License
+                             Server above, with no .lic file needed at all -->
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="License Key"
+                                       Style="{StaticResource FilterLabelStyle}" Margin="5"/>
+                            <Border CornerRadius="8" Background="White" BorderBrush="#2E3A59" BorderThickness="1" Height="32">
+                                <TextBox x:Name="txtLicenseKey"
+                                         Background="Transparent" BorderThickness="0"
+                                         VerticalContentAlignment="Center" Padding="8,0"/>
+                            </Border>
+                            <TextBlock Text="Paste the key shown for this license in FloatingLicenseServer, then Activate."
+                                       FontSize="11" Foreground="Gray" Margin="5,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
 
             <!-- Expiry Label -->
             <TextBlock x:Name="lblExpiry"
@@ -350,7 +361,7 @@
                        Text="License expires on..." />
 
             <!-- Buttons -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
                 <Button x:Name="btnActivate"
                         Content="Activate"
                         Width="120"
@@ -362,5 +373,6 @@
                         Click="btnCancel_Click"/>
             </StackPanel>
         </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
