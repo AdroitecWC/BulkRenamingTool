@@ -32,8 +32,12 @@ namespace RenaimingToolCS.ViewModels
     {
         private const string LicfilePwd = "Kbe@Adr";
         private const string AppProduct = "Bulk Rename";
-        private const string UsedLicensesRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\MyTool\UsedLicenses";
-        private const string SettingsRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\MyTool\Settings";
+        // Scoped by ToolName -- these paths used to be the literal, identical string across
+        // every Adroitec tool ("...\MyTool\..."), so activating one tool with a License Key
+        // would overwrite the same registry value another tool reads back, making it look
+        // like "every tool accepts the same key". Each tool now gets its own subkey.
+        private const string UsedLicensesRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\BulkRenameToolEdition\UsedLicenses";
+        private const string SettingsRegPath = @"Software\Adroitec Engineering Solutions Pvt Ltd\BulkRenameToolEdition\Settings";
 
         // ── Floating license runtime state ───────────────────────────────────────
         private static string _seatToken = "";
