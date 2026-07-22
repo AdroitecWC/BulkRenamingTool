@@ -13,9 +13,16 @@ namespace RenaimingToolCS
     public partial class App : Application
     {
         protected override void OnStartup(StartupEventArgs e)
-       
+
         {
             base.OnStartup(e);
+
+            // Default ShutdownMode is OnLastWindowClose — with no window open yet,
+            // closing the LicenseWindow (the only open window at that point) would
+            // trigger shutdown immediately, racing with the MainWindow.Show() call
+            // right after it and closing the whole app instead of continuing on.
+            // Switch to explicit shutdown until we know which window is staying open.
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             // Check if the license is valid.
             if (LicenseManager.CheckLicense())
@@ -23,6 +30,7 @@ namespace RenaimingToolCS
                 // If license is valid, open the main application window.
                 // Replace 'MainWindow' with the actual name of your main window if it's different.
                 var mainWindow = new MainWindow();
+                ShutdownMode = ShutdownMode.OnLastWindowClose;
                 mainWindow.Show();
             }
             else
@@ -35,6 +43,7 @@ namespace RenaimingToolCS
                 {
                     // If the user successfully activated the license, open the main window.
                     var mainWindow = new MainWindow();
+                    ShutdownMode = ShutdownMode.OnLastWindowClose;
                     mainWindow.Show();
                 }
                 else
