@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RenaimingToolCS.Views"
         mc:Ignorable="d"
-        Title="LicenseWindow" Height="640" Width="620">
+        Title="LicenseWindow" Height="520" Width="620">
     <Window.Resources>
         <!-- Company Theme Resources -->
         <SolidColorBrush x:Key="BackgroundColor" Color="White"/>
