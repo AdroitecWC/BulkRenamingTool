@@ -18,6 +18,13 @@ namespace RenaimingToolCS.Views
             InitializeComponent();
             txtSystemName.Text = Environment.MachineName;
             txtRequestCode.Text = requestCode;
+            txtToolName.Text = LicenseManager.AppProduct;
+            Title = $"{LicenseManager.AppProduct} — License Activation";
+
+            // Pre-fill the last server address used (if any) -- Change License clears the
+            // saved override, and this field otherwise starts blank every time, forcing a
+            // blind retype where a typo/blank entry looks exactly like the server being down.
+            txtNetworkServer.Text = LicenseManager.GetLastServerAddress();
 
             // Show expiry date if already licensed
             if (LicenseManager.CheckLicense())
@@ -59,6 +66,31 @@ namespace RenaimingToolCS.Views
             }
         }
 
+        /// <summary>
+        /// Shown whenever a floating checkout can't reach the NLM -- during
+        /// activation itself, not just on a later launch of an already-configured
+        /// install. Yes leaves the window open so the user can enter a different
+        /// license/server; No closes without activating.
+        /// </summary>
+        private void ShowServerUnavailablePrompt()
+        {
+            var attemptedUrl = LicenseManager.LastServerUrl;
+            var urlLine = attemptedUrl == "" ? "" :
+                Environment.NewLine + $"Address tried: {attemptedUrl}" + Environment.NewLine;
+
+            var answer = MessageBox.Show(
+                "Network License Manager is not available." + Environment.NewLine +
+                "The Network License Manager could not be reached — it may be offline, or the server address/port may be wrong." + Environment.NewLine +
+                urlLine + Environment.NewLine +
+                "Click Yes to change the license, or No to close.",
+                "Network License Manager Not Available", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer == MessageBoxResult.No)
+            {
+                DialogResult = false;
+                Close();
+            }
+        }
+
         private void btnActivate_Click(object sender, RoutedEventArgs e)
         {
             var licenseKey = txtLicenseKey.Text.Trim();
@@ -70,6 +102,10 @@ namespace RenaimingToolCS.Views
                     MessageBox.Show(keyMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     DialogResult = true;
                     Close();
+                }
+                else if (LicenseManager.LastActivationError == LicenseError.ServerUnreachable)
+                {
+                    ShowServerUnavailablePrompt();
                 }
                 else
                 {
@@ -110,14 +146,7 @@ namespace RenaimingToolCS.Views
                         break;
 
                     case LicenseError.ServerUnreachable:
-                        MessageBox.Show(
-                            "Floating license file copied successfully.\n\n" +
-                            "However, the license server could not be reached.\n" +
-                            "Make sure the FloatingLicenseServer is running on the server machine and the port is correct.\n\n" +
-                            "The license file has been saved — the app will work once the server is reachable.",
-                            "Server Unreachable", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        DialogResult = true;
-                        Close();
+                        ShowServerUnavailablePrompt();
                         break;
 
                     case LicenseError.NoSeatsAvailable:
@@ -155,7 +184,7 @@ namespace RenaimingToolCS.Views
             var address = txtNetworkServer.Text.Trim();
             if (address == "")
             {
-                MessageBox.Show("Enter a server address, e.g. vizserver:1122.", "Network License Server",
+                MessageBox.Show("Enter a server address, e.g. vizserver:1122.", "Host Name",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

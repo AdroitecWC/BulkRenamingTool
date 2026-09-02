@@ -67,6 +67,7 @@ namespace RenaimingToolCS.ViewModels
         public ICommand BrowseExcelFileCommand { get; }
         public ICommand SelectAllCommand { get; }
         public ICommand OpenSettingsWindowCommand { get; }
+        public ICommand OpenLicenseSettingsWindowCommand { get; }
 
         public RenamingViewModel()
         {
@@ -76,8 +77,15 @@ namespace RenaimingToolCS.ViewModels
             BrowseOutputFolderCommand = new RelayCommand(BrowseOutputFolder);
             BrowseExcelFileCommand = new RelayCommand(BrowseExcelFile);
             OpenSettingsWindowCommand = new RelayCommand(OpenSettingsWindow);
+            OpenLicenseSettingsWindowCommand = new RelayCommand(OpenLicenseSettingsWindow);
         }
 
+        private void OpenLicenseSettingsWindow()
+        {
+            var licenseSettingsWindow = new LicenseSettingsWindow();
+            licenseSettingsWindow.DataContext = new LicenseSettingsViewModel();
+            licenseSettingsWindow.ShowDialog();
+        }
 
         private void OpenSettingsWindow()
         {

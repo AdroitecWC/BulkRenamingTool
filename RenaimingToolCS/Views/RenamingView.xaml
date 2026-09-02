@@ -176,6 +176,8 @@
 
             <Button x:Name="SettingsButton" Style="{StaticResource IconButtonStyle}" Content="⚙️" ToolTip="Settings" DockPanel.Dock="Right"  Command="{Binding OpenSettingsWindowCommand}" VerticalAlignment="Center"/>
 
+            <Button x:Name="LicenseButton" Style="{StaticResource IconButtonStyle}" Content="🔑" ToolTip="License Management" DockPanel.Dock="Right" Command="{Binding OpenLicenseSettingsWindowCommand}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+
             <ToggleButton x:Name="ThemeToggleButton" Style="{StaticResource SwitchToggleButton}" DockPanel.Dock="Right" ToolTip="Toggle Light/Dark Mode" Checked="ThemeToggleButton_Checked" Unchecked="ThemeToggleButton_Unchecked" VerticalAlignment="Center"/>
 
             <Image x:Name="LogoImage" Height="40" DockPanel.Dock="Right" Stretch="Uniform" VerticalAlignment="center" Margin="0,0,15,0"/>
