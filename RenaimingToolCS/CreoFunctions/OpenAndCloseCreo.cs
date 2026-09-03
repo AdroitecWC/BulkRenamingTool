@@ -87,13 +87,13 @@ namespace RenaimingToolCS.CreoFunctions
                         }
                     }
 
-                   proePath = Environment.GetEnvironmentVariable("PROE_PATH");
-                     //proePath = "D:\\PTC\\Creo 11.0.5.0\\Parametric\\bin\\parametric.exe";
                     string myDocsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                     string startPath = System.IO.Path.Combine(myDocsPath, "\\");
-                    proE =  SettingsManager.Instance.CurrentCreoPath;
 
-                    System.Diagnostics.Process.Start(proePath, startPath);
+                    // Get Creo path with fallback logic (Settings -> Env Var -> Registry)
+                    proE = GetCreoPathWithFallback();
+
+                    System.Diagnostics.Process.Start(proE, startPath);
 
                     System.Threading.Thread.Sleep(10000);
 
@@ -267,6 +267,42 @@ namespace RenaimingToolCS.CreoFunctions
             catch (Exception)
             {
                 // Suppress any exceptions
+            }
+        }
+
+        private string GetCreoPathWithFallback()
+        {
+            // Priority 1: SettingsManager (user's explicit choice)
+            string path = SettingsManager.Instance.CurrentCreoPath;
+            if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                return path;
+
+            // Priority 2: Environment variable
+            path = Environment.GetEnvironmentVariable("PROE_PATH");
+            if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                return path;
+
+            // Priority 3: Registry
+            path = ReadCreoPathFromRegistry();
+            if (!string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                return path;
+
+            throw new Exception("Creo executable path not found. Please configure in Settings.");
+        }
+
+        private string ReadCreoPathFromRegistry()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", false))
+                {
+                    return key?.GetValue("PROE_PATH")?.ToString();
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 

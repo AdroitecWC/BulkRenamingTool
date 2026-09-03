@@ -18,11 +18,18 @@ namespace RenaimingToolCS.Views
             InitializeComponent();
             txtSystemName.Text = Environment.MachineName;
             txtRequestCode.Text = requestCode;
+            txtToolName.Text = LicenseManager.AppProduct;
+            Title = $"{LicenseManager.AppProduct} — License Activation";
+
+            // Pre-fill the last server address used (if any) -- Change License clears the
+            // saved override, and this field otherwise starts blank every time, forcing a
+            // blind retype where a typo/blank entry looks exactly like the server being down.
+            txtNetworkServer.Text = LicenseManager.GetLastServerAddress();
 
             // Show expiry date if already licensed
             if (LicenseManager.CheckLicense())
             {
-                var licPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Resources\License\License.lic");
+                var licPath = LicenseManager.GetLicensePath();
                 if (File.Exists(licPath))
                 {
                     try
@@ -59,8 +66,54 @@ namespace RenaimingToolCS.Views
             }
         }
 
+        /// <summary>
+        /// Shown whenever a floating checkout can't reach the NLM -- during
+        /// activation itself, not just on a later launch of an already-configured
+        /// install. Yes leaves the window open so the user can enter a different
+        /// license/server; No closes without activating.
+        /// </summary>
+        private void ShowServerUnavailablePrompt()
+        {
+            var attemptedUrl = LicenseManager.LastServerUrl;
+            var urlLine = attemptedUrl == "" ? "" :
+                Environment.NewLine + $"Address tried: {attemptedUrl}" + Environment.NewLine;
+
+            var answer = MessageBox.Show(
+                "Network License Manager is not available." + Environment.NewLine +
+                "The Network License Manager could not be reached — it may be offline, or the server address/port may be wrong." + Environment.NewLine +
+                urlLine + Environment.NewLine +
+                "Click Yes to change the license, or No to close.",
+                "Network License Manager Not Available", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer == MessageBoxResult.No)
+            {
+                DialogResult = false;
+                Close();
+            }
+        }
+
         private void btnActivate_Click(object sender, RoutedEventArgs e)
         {
+            var licenseKey = txtLicenseKey.Text.Trim();
+            if (licenseKey != "")
+            {
+                var ok = LicenseManager.ActivateWithKey(licenseKey, txtNetworkServer.Text.Trim(), out var keyMessage);
+                if (ok)
+                {
+                    MessageBox.Show(keyMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    DialogResult = true;
+                    Close();
+                }
+                else if (LicenseManager.LastActivationError == LicenseError.ServerUnreachable)
+                {
+                    ShowServerUnavailablePrompt();
+                }
+                else
+                {
+                    MessageBox.Show(keyMessage, "Activation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                return;
+            }
+
             var selectedFile = txtFilePath.Text.Trim();
             if (!File.Exists(selectedFile))
             {
@@ -70,24 +123,82 @@ namespace RenaimingToolCS.Views
 
             try
             {
-                var targetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Resources\License\License.lic");
-                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                var targetPath = LicenseManager.GetLicensePath();
                 File.Copy(selectedFile, targetPath, true);
 
-                if (LicenseManager.CheckLicense())
+                // For node-locked licenses, write the Activated flag first
+                if (!LicenseManager.ActivateLicense())
                 {
-                    MessageBox.Show("License Activated!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    DialogResult = true;
-                    Close();
+                    MessageBox.Show(
+                        "This license is not valid for this machine.\nPlease make sure you selected the correct .lic file.",
+                        "Activation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
                 }
-                else
+
+                var result = LicenseManager.CheckLicenseDetailed();
+
+                switch (result)
                 {
-                    MessageBox.Show("Invalid license file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    case LicenseError.None:
+                        MessageBox.Show("License activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                        DialogResult = true;
+                        Close();
+                        break;
+
+                    case LicenseError.ServerUnreachable:
+                        ShowServerUnavailablePrompt();
+                        break;
+
+                    case LicenseError.NoSeatsAvailable:
+                        MessageBox.Show(
+                            $"No seats available ({LicenseManager.LastSeatsInUse}/{LicenseManager.LastSeatsMax} in use).\n" +
+                            "Ask another user to close the application to free a seat.",
+                            "No Seats Available", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        break;
+
+                    case LicenseError.InvalidLicense:
+                        MessageBox.Show(
+                            "The server does not recognise this license UID.\nPlease contact your administrator.",
+                            "Invalid License", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
+
+                    case LicenseError.Expired:
+                        MessageBox.Show("This license has expired. Please renew it.", "Expired", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
+
+                    default:
+                        MessageBox.Show(
+                            $"License check failed ({result}).\nPlease check the license file and try again.",
+                            "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Activation failed: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void btnConnectServer_Click(object sender, RoutedEventArgs e)
+        {
+            var address = txtNetworkServer.Text.Trim();
+            if (address == "")
+            {
+                MessageBox.Show("Enter a server address, e.g. vizserver:1122.", "Host Name",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            btnConnectServer.IsEnabled = false;
+            try
+            {
+                var ok = LicenseManager.TestAndSaveServerUrl(address, out var message);
+                MessageBox.Show(message, ok ? "Connected" : "Connection Failed",
+                    MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnConnectServer.IsEnabled = true;
             }
         }
 
